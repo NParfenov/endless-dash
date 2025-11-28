@@ -22,16 +22,20 @@ window.addEventListener('resize', resizeCanvas);
 // MUSIC SYSTEM
 // ===================================
 
-// Music tracks - Using free music from pixabay.com (royalty-free)
+// Music tracks - Using free energetic electronic music from pixabay.com (royalty-free)
 const musicTracks = {
-    menu: 'https://cdn.pixabay.com/audio/2022/03/10/audio_4a5e255db9.mp3', // Upbeat electronic
-    level: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3', // Energetic gaming music
-    endless: 'https://cdn.pixabay.com/audio/2022/08/02/audio_74e8d3a5e0.mp3' // Intense electronic
+    menu: 'https://cdn.pixabay.com/audio/2022/03/24/audio_c2f9e6169f.mp3', // Upbeat electronic menu
+    level1: 'https://cdn.pixabay.com/audio/2022/08/04/audio_884fe88c21.mp3', // Energetic techno - Level 1
+    level2: 'https://cdn.pixabay.com/audio/2022/11/22/audio_134e5e784c.mp3', // Fast electronic - Level 2
+    level3: 'https://cdn.pixabay.com/audio/2024/07/30/audio_33bfac848f.mp3', // Intense electronic - Level 3
+    endless: 'https://cdn.pixabay.com/audio/2023/10/30/audio_0d021e11d7.mp3' // High energy endless loop
 };
 
 // Audio objects
 let menuMusic = null;
-let levelMusic = null;
+let level1Music = null;
+let level2Music = null;
+let level3Music = null;
 let endlessMusic = null;
 let currentMusic = null;
 let musicEnabled = true;
@@ -40,17 +44,23 @@ let musicEnabled = true;
 function initMusic() {
     try {
         menuMusic = new Audio(musicTracks.menu);
-        levelMusic = new Audio(musicTracks.level);
+        level1Music = new Audio(musicTracks.level1);
+        level2Music = new Audio(musicTracks.level2);
+        level3Music = new Audio(musicTracks.level3);
         endlessMusic = new Audio(musicTracks.endless);
         
         // Set all music to loop
         menuMusic.loop = true;
-        levelMusic.loop = true;
+        level1Music.loop = true;
+        level2Music.loop = true;
+        level3Music.loop = true;
         endlessMusic.loop = true;
         
         // Set volume
         menuMusic.volume = 0.3;
-        levelMusic.volume = 0.3;
+        level1Music.volume = 0.3;
+        level2Music.volume = 0.3;
+        level3Music.volume = 0.3;
         endlessMusic.volume = 0.3;
     } catch (error) {
         console.log('Music initialization failed:', error);
@@ -68,8 +78,12 @@ function playMusic(track) {
     // Play new track
     if (track === 'menu' && menuMusic) {
         currentMusic = menuMusic;
-    } else if (track === 'level' && levelMusic) {
-        currentMusic = levelMusic;
+    } else if (track === 'level1' && level1Music) {
+        currentMusic = level1Music;
+    } else if (track === 'level2' && level2Music) {
+        currentMusic = level2Music;
+    } else if (track === 'level3' && level3Music) {
+        currentMusic = level3Music;
     } else if (track === 'endless' && endlessMusic) {
         currentMusic = endlessMusic;
     }
@@ -102,7 +116,7 @@ function toggleMusic() {
         if (gameState === 'menu') {
             playMusic('menu');
         } else if (gameRunning && currentMode === 'level') {
-            playMusic('level');
+            playMusic('level' + currentLevel);
         } else if (gameRunning && currentMode === 'endless') {
             playMusic('endless');
         }
@@ -320,7 +334,7 @@ function startLevel(level) {
     resetGame();
     gameState = 'playing';
     gameRunning = true;
-    playMusic('level'); // Start level music
+    playMusic('level' + level); // Play level-specific music (level1, level2, or level3)
     gameLoop();
 }
 
