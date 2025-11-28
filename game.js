@@ -164,9 +164,9 @@ const Game = {
             if (type === 'spike') {
                 this.list.push({
                     x: canvas.width + xOffset,
-                    y: ground.y - 40,
-                    width: 40,
-                    height: 40,
+                    y: ground.y - STEP,
+                    width: STEP,
+                    height: STEP,
                     type: 'spike',
                     color: '#ff6b6b'
                 });
@@ -174,9 +174,9 @@ const Game = {
             else if (type === 'block') {
                 this.list.push({
                     x: canvas.width + xOffset,
-                    y: ground.y - 40,
-                    width: 40,
-                    height: 40,
+                    y: ground.y - STEP,
+                    width: STEP,
+                    height: STEP,
                     type: 'block',
                     color: '#ff4444'
                 });
@@ -184,9 +184,9 @@ const Game = {
             else if (type === 'platform') {
                 this.list.push({
                     x: canvas.width + xOffset,
-                    y: ground.y - 40,
-                    width: 40,
-                    height: 40,
+                    y: ground.y - STEP,
+                    width: STEP,
+                    height: STEP,
                     type: 'platform',
                     color: '#4ecca3'
                 });
@@ -220,16 +220,16 @@ const Game = {
             }
             else if (type === 'double') {
                 this.create('spike', 0);
-                this.create('spike', 40);
+                this.create('spike', STEP);
             }
             else if (type === 'triple') {
                 this.create('spike', 0);
-                this.create('spike', 40);
-                this.create('spike', 80);
+                this.create('spike', STEP);
+                this.create('spike', STEP);
             }
             else if (type === 'platformHop') {
                 this.create('platform', 0);
-                this.create('platform', 150);
+                this.create('platform', STEP*3);
             }
             else if (type === 'orb') {
                 this.create('orb', 0);
@@ -237,11 +237,11 @@ const Game = {
             else if (type === 'longSpikes') {
                 // 5 spikes with orb above
                 this.create('spike', 0);
-                this.create('spike', 40);
-                this.create('spike', 80);
-                this.create('spike', 120);
-                this.create('spike', 160);
-                this.create('orb', 80);
+                this.create('spike', STEP);
+                this.create('spike', STEP*2);
+                this.create('spike', STEP*3);
+                this.create('spike', STEP*4);
+                this.create('orb', STEP*2);
             }
         }
     },
@@ -249,16 +249,18 @@ const Game = {
     // Audio system
     audio: {
         tracks: {
-            menu: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3',
-            level1: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3',
+            menu: 'https://cdn.pixabay.com/audio/2025/03/07/audio_b9b664b09c.mp3',
+            level1: 'https://cdn.pixabay.com/audio/2024/11/05/audio_a043da5a4b.mp3',
             level2: 'https://cdn.pixabay.com/audio/2025/05/21/audio_fa20813ea6.mp3',
-            level3: 'https://cdn.pixabay.com/audio/2025/08/30/audio_00ae00f400.mp3',
+            level3: 'https://cdn.pixabay.com/audio/2025/06/07/audio_a67e673ed7.mp3',
+            level4: 'https://cdn.pixabay.com/audio/2025/05/24/audio_2700972abb.mp3',
             endless: 'https://audio.ngfiles.com/952000/952542_naither.mp3?f1595965602'
         },
         menuMusic: null,
         level1Music: null,
         level2Music: null,
         level3Music: null,
+        level4Music: null,
         endlessMusic: null,
         currentMusic: null,
         enabled: true,
@@ -270,6 +272,7 @@ const Game = {
                 this.level1Music = new Audio(this.tracks.level1);
                 this.level2Music = new Audio(this.tracks.level2);
                 this.level3Music = new Audio(this.tracks.level3);
+                this.level4Music = new Audio(this.tracks.level4);
                 this.endlessMusic = new Audio(this.tracks.endless);
 
                 // Set all music to loop
@@ -277,6 +280,7 @@ const Game = {
                 this.level1Music.loop = false;
                 this.level2Music.loop = false;
                 this.level3Music.loop = false;
+                this.level4Music.loop = false;
                 this.endlessMusic.loop = true;
 
                 // Set volume
@@ -284,6 +288,7 @@ const Game = {
                 this.level1Music.volume = this.volume;
                 this.level2Music.volume = this.volume;
                 this.level3Music.volume = this.volume;
+                this.level4Music.volume = this.volume;
                 this.endlessMusic.volume = this.volume;
             } catch (error) {
                 console.log('Music initialization failed:', error);
@@ -306,6 +311,8 @@ const Game = {
                 this.currentMusic = this.level2Music;
             } else if (track === 'level3' && this.level3Music) {
                 this.currentMusic = this.level3Music;
+            } else if (track === 'level4' && this.level4Music) {
+                this.currentMusic = this.level4Music;
             } else if (track === 'endless' && this.endlessMusic) {
                 this.currentMusic = this.endlessMusic;
             }
@@ -351,6 +358,7 @@ const Game = {
             if (this.level1Music) this.level1Music.volume = this.volume;
             if (this.level2Music) this.level2Music.volume = this.volume;
             if (this.level3Music) this.level3Music.volume = this.volume;
+            if (this.level4Music) this.level4Music.volume = this.volume;
             if (this.endlessMusic) this.endlessMusic.volume = this.volume;
 
             // Save to localStorage
@@ -360,6 +368,16 @@ const Game = {
 
     // Physics
     physics: {
+
+        isLandingOnTop(playerRect, obstacleRect) {
+            const bottomY = playerRect.y + playerRect.height;
+            const tolerance = 15;
+
+            return bottomY >= obstacleRect.y &&
+                   bottomY <= obstacleRect.y + tolerance &&
+                   playerRect.velocityY >= 0;
+        },
+
         checkCollision(rect1, rect2) {
             return rect1.x < rect2.x + rect2.width &&
                    rect1.x + rect1.width > rect2.x &&
@@ -408,14 +426,7 @@ const Game = {
             return false;
         },
 
-        isLandingOnTop(playerRect, obstacleRect) {
-            const bottomY = playerRect.y + playerRect.height;
-            const tolerance = 15;
-
-            return bottomY >= obstacleRect.y &&
-                   bottomY <= obstacleRect.y + tolerance &&
-                   playerRect.velocityY >= 0;
-        }
+        
     },
 
     // Renderer
@@ -852,12 +863,18 @@ if (savedVolume !== null) {
 // Start menu music after user interaction (required by browsers)
 let menuMusicStarted = false;
 document.addEventListener('click', function initMenuMusic() {
-    if (!menuMusicStarted && Game.audio.enabled) {
+    if (!menuMusicStarted && Game.audio.enabled && gameState === 'menu') {
         Game.audio.play('menu');
         menuMusicStarted = true;
     }
 }, { once: true });
 
+
+// ===================================
+// GAME CONSTANTS
+// ===================================
+
+const STEP = 40; // Base unit for grid spacing and obstacle positioning (pixels)
 
 // ===================================
 // GAME STATE VARIABLES
@@ -913,19 +930,19 @@ const levels = {
         duration: 25, // seconds
         obstacles: [
             { time: 0.80, type: 'spike', x: 0 },
-            { time: 1.67, type: 'spike', x: 0 },
+            { time: 0.80, type: 'spike', x: STEP*8 },
             { time: 3.33, type: 'spike', x: 0 },
-            { time: 3.33, type: 'spike', x: 40 },
+            { time: 3.33, type: 'spike', x: STEP },
             { time: 5.00, type: 'block', x: 0 },
             { time: 6.67, type: 'spike', x: 0 },
-            { time: 7.50, type: 'spike', x: 40 },
+            { time: 7.50, type: 'spike', x: STEP },
 
             // 4 spikes with orb - teaching mechanic
             { time: 10.00, type: 'spike', x: 0 },
-            { time: 10.00, type: 'spike', x: 40 },
-            { time: 10.00, type: 'spike', x: 80 },
-            { time: 10.00, type: 'spike', x: 120 },
-            { time: 10.00, type: 'orb', x: 60 },
+            { time: 10.00, type: 'spike', x: STEP },
+            { time: 10.00, type: 'spike', x: STEP*2 },
+            { time: 10.00, type: 'spike', x: STEP*3 },
+            { time: 10.00, type: 'orb', x: STEP+STEP/2 },
 
             { time: 13.33, type: 'platform', x: 0 },
             { time: 15.83, type: 'platform', x: 0 },
@@ -945,36 +962,51 @@ const levels = {
         duration: 27.5, // seconds
         obstacles: [
             { time: 1.33, type: 'spike', x: 0 },
-            { time: 2.67, type: 'spike', x: 0 },
-            { time: 4.00, type: 'block', x: 0 },
+            { time: 1.33, type: 'spike', x: STEP*5 },
+            { time: 1.33, type: 'block', x: STEP*10 },
 
             // 5 spikes with orb
             { time: 6.33, type: 'spike', x: 0 },
-            { time: 6.33, type: 'spike', x: 40 },
-            { time: 6.33, type: 'spike', x: 80 },
-            { time: 6.33, type: 'spike', x: 120 },
-            { time: 6.33, type: 'spike', x: 160 },
-            { time: 6.33, type: 'orb', x: 80 },
+            { time: 6.33, type: 'spike', x: STEP },
+            { time: 6.33, type: 'spike', x: STEP*2 },
+            { time: 6.33, type: 'spike', x: STEP*3 },
+            { time: 6.33, type: 'spike', x: STEP*4 },
+            { time: 6.33, type: 'orb', x: STEP*2 },
 
             // Platform hop sequence
             { time: 9.17, type: 'platform', x: 0 },
-            { time: 11.33, type: 'platform', x: 0 },
-            { time: 13.50, type: 'platform', x: 0 },
+            { time: 9.17, type: 'platform', x: STEP*5 },
+            { time: 9.17, type: 'platform', x: STEP*10 },
+            { time: 9.17, type: 'spike', x: STEP },
+            { time: 9.17, type: 'block', x: STEP*2 },
+            { time: 9.17, type: 'spike', x: STEP*3 },
+            { time: 9.17, type: 'block', x: STEP*4 },
 
             { time: 15.83, type: 'spike', x: 0 },
-            { time: 17.17, type: 'block', x: 0 },
+            { time: 15.83, type: 'spike', x: STEP },
 
-            // High platform with orb
-            { time: 19.17, type: 'orb', x: 0 },
-            { time: 20.33, type: 'platform', x: 0 },
+            { time: 17.17, type: 'block', x: 0 },
+            { time: 17.17, type: 'block', x: STEP },
+
+            // Platform hop sequence with a twist
+
+            { time: 19.00, type: 'platform', x: 0 },
+            { time: 19.00, type: 'platform', x: STEP*5 },
+            { time: 19.00, type: 'block', x: STEP*10 },
+            { time: 19.00, type: 'spike', x: STEP },
+            { time: 19.00, type: 'block', x: STEP*2 },
+            { time: 19.00, type: 'spike', x: STEP*3 },
+            { time: 19.00, type: 'block', x: STEP*4 },
 
             // Staircase
             { time: 22.50, type: 'platform', x: 0 },
             { time: 23.67, type: 'platform', x: 0 },
             { time: 24.83, type: 'platform', x: 0 },
-            { time: 24.83, type: 'spike', x: 60 },
+            { time: 24.83, type: 'spike', x: STEP },
 
-            { time: 26.67, type: 'spike', x: 0 }
+            { time: 26.67, type: 'spike', x: 0 },
+            { time: 26.67, type: 'spike', x: STEP },
+            { time: 26.67, type: 'spike', x: STEP*2 },
         ]
     },
     3: {
@@ -983,27 +1015,41 @@ const levels = {
         duration: 30, // seconds
         obstacles: [
             { time: 1.33, type: 'spike', x: 0 },
+            { time: 1.33, type: 'spike', x: STEP },
+
             { time: 2.67, type: 'spike', x: 0 },
+            { time: 2.67, type: 'spike', x: STEP },
+            { time: 2.67, type: 'spike', x: STEP*2 },
+
             { time: 4.00, type: 'block', x: 0 },
+            { time: 4.00, type: 'spike', x: STEP },
+            { time: 4.00, type: 'block', x: STEP*2 },
 
             // 6 spikes with orb
             { time: 5.83, type: 'spike', x: 0 },
-            { time: 5.83, type: 'spike', x: 40 },
-            { time: 5.83, type: 'spike', x: 80 },
-            { time: 5.83, type: 'spike', x: 120 },
-            { time: 5.83, type: 'spike', x: 160 },
-            { time: 5.83, type: 'spike', x: 200 },
-            { time: 5.83, type: 'orb', x: 100 },
+            { time: 5.83, type: 'spike', x: STEP },
+            { time: 5.83, type: 'spike', x: STEP*2 },
+            { time: 5.83, type: 'spike', x: STEP*3 },
+            { time: 5.83, type: 'spike', x: STEP*4 },
+            { time: 5.83, type: 'spike', x: STEP*5 },
+            { time: 5.83, type: 'orb', x: STEP*2+STEP/2 },
 
-            // Platform hops
+            // Platform hops with orb at the end
             { time: 9.17, type: 'platform', x: 0 },
-            { time: 10.83, type: 'platform', x: 0 },
+            { time: 9.17, type: 'platform', x: STEP*7 },
+            { time: 9.17, type: 'orb', x: STEP*9 },
+            { time: 9.17, type: 'spike', x: STEP*8 },
+            { time: 9.17, type: 'spike', x: STEP*9 },
+            { time: 9.17, type: 'spike', x: STEP*10 },
 
-            // High platform with orb
+
+            
             { time: 13.00, type: 'orb', x: 0 },
-            { time: 14.17, type: 'platform', x: 0 },
+            { time: 14.17, type: 'block', x: 0 },
+            { time: 14.17, type: 'block', x: STEP },
 
             { time: 16.33, type: 'spike', x: 0 },
+
 
             // Staircase
             { time: 18.00, type: 'platform', x: 0 },
@@ -1013,21 +1059,283 @@ const levels = {
 
             { time: 23.00, type: 'block', x: 0 },
 
-            // 5 spikes with orb
+            // 8 spikes with orb
             { time: 25.00, type: 'spike', x: 0 },
-            { time: 25.00, type: 'spike', x: 40 },
-            { time: 25.00, type: 'spike', x: 80 },
-            { time: 25.00, type: 'spike', x: 120 },
-            { time: 25.00, type: 'spike', x: 160 },
-            { time: 25.00, type: 'orb', x: 80 },
+            { time: 25.00, type: 'spike', x: STEP },
+            { time: 25.00, type: 'spike', x: STEP*2 },
+            { time: 25.00, type: 'spike', x: STEP*3 },
+            { time: 25.00, type: 'spike', x: STEP*4 },
+            { time: 25.00, type: 'spike', x: STEP*5 },
+            { time: 25.00, type: 'spike', x: STEP*6 },
+            { time: 25.00, type: 'spike', x: STEP*7 },
+            { time: 25.00, type: 'orb', x: STEP*2 },
 
             { time: 27.50, type: 'platform', x: 0 },
+            { time: 27.50, type: 'platform', x: STEP },
+            { time: 27.50, type: 'block', x: STEP*5 },
 
             // Final challenge
             { time: 29.17, type: 'spike', x: 0 },
-            { time: 29.17, type: 'spike', x: 40 },
-            { time: 29.17, type: 'spike', x: 80 },
-            { time: 29.17, type: 'spike', x: 120 }
+            { time: 29.17, type: 'spike', x: STEP },
+            { time: 29.17, type: 'spike', x: STEP*2 },
+            { time: 29.17, type: 'spike', x: STEP*3 }
+        ]
+    },
+    4: { 
+        name: "Level 4: Orb Rush",
+        speed: 14,
+        duration: 30, // seconds
+        obstacles: [
+            { time: 0.50, type: 'platform', x: 0 },
+
+            { time: 1.20, type: 'platform', x: 0 },
+            { time: 1.20, type: 'spike', x: STEP },
+            { time: 1.20, type: 'spike', x: STEP*2 },
+            { time: 1.20, type: 'spike', x: STEP*3 },
+
+            { time: 2.00, type: 'block', x: 0 },
+            { time: 2.00, type: 'block', x: STEP },
+            { time: 2.00, type: 'block', x: STEP*2 },
+            { time: 2.00, type: 'block', x: STEP*3 },
+
+            { time: 3.20, type: 'spike', x: 0 },
+            { time: 3.20, type: 'spike', x: STEP },
+            { time: 3.20, type: 'spike', x: STEP*2 },
+            { time: 3.20, type: 'spike', x: STEP*3 },
+
+            { time: 4.20, type: 'platform', x: 0 },
+            { time: 4.20, type: 'platform', x: STEP },
+            { time: 4.20, type: 'platform', x: STEP*2 },
+
+            { time: 4.20, type: 'block', x: STEP*3 },
+            { time: 4.20, type: 'spike', x: STEP*4 },
+            { time: 4.20, type: 'spike', x: STEP*5 },
+            { time: 4.20, type: 'spike', x: STEP*6 },
+            { time: 4.20, type: 'spike', x: STEP*7 },
+            { time: 4.20, type: 'spike', x: STEP*8 },
+            { time: 4.20, type: 'spike', x: STEP*9 },
+            { time: 4.20, type: 'spike', x: STEP*10 },
+            { time: 4.20, type: 'spike', x: STEP*11 },
+            { time: 4.20, type: 'block', x: STEP*12 },
+
+            { time: 5.20, type: 'spike', x: 0 },
+            { time: 5.20, type: 'spike', x: STEP },
+            { time: 5.20, type: 'spike', x: STEP*2 },
+            { time: 5.20, type: 'spike', x: STEP*3 },
+            { time: 5.20, type: 'spike', x: STEP*4 },
+            { time: 5.20, type: 'spike', x: STEP*5 },
+            { time: 5.20, type: 'spike', x: STEP*6 },
+            { time: 5.20, type: 'spike', x: STEP*7 },
+            { time: 5.20, type: 'spike', x: STEP*8 },
+            { time: 5.20, type: 'spike', x: STEP*9 },
+            { time: 5.20, type: 'spike', x: STEP*10 },
+            { time: 5.20, type: 'spike', x: STEP*11 },
+            { time: 5.20, type: 'spike', x: STEP*12 },
+            { time: 5.20, type: 'spike', x: STEP*13 },
+
+            { time: 5.20, type: 'orb', x: STEP*5 },
+            { time: 5.20, type: 'orb', x: STEP*4 },
+
+            { time: 6.25, type: 'spike', x: 0 },
+            { time: 6.25, type: 'spike', x: STEP },
+            { time: 6.25, type: 'spike', x: STEP*2 },
+            { time: 6.25, type: 'spike', x: STEP*3 },
+            { time: 6.25, type: 'spike', x: STEP*4 },
+            { time: 6.25, type: 'spike', x: STEP*5 },
+            { time: 6.25, type: 'spike', x: STEP*6 },
+            { time: 6.25, type: 'spike', x: STEP*7 },
+            { time: 6.25, type: 'spike', x: STEP*8 },
+
+            { time: 7.4, type: 'platform', x: 0 },
+            { time: 7.4, type: 'platform', x: STEP },
+
+            { time: 7.4, type: 'spike', x: STEP*3 },
+            { time: 7.4, type: 'block', x: STEP*5 },
+            { time: 7.4, type: 'spike', x: STEP*7 },
+            { time: 7.4, type: 'block', x: STEP*9 },
+            { time: 7.4, type: 'spike', x: STEP*11 },
+
+            { time: 7.4, type: 'platform', x: STEP*13 },
+            { time: 7.4, type: 'platform', x: STEP*14 },
+
+            { time: 7.4, type: 'orb', x: STEP*23 },
+            { time: 7.4, type: 'orb', x: STEP*24 },
+
+            { time: 7.4, type: 'block', x: STEP*16 },
+            { time: 7.4, type: 'block', x: STEP*18 },
+            { time: 7.4, type: 'block', x: STEP*20 },
+            { time: 7.4, type: 'block', x: STEP*22 },
+            { time: 7.4, type: 'spike', x: STEP*24 },
+            { time: 7.4, type: 'spike', x: STEP*25 },
+            { time: 7.4, type: 'spike', x: STEP*26 },
+            { time: 7.4, type: 'spike', x: STEP*27 },
+            { time: 7.4, type: 'spike', x: STEP*28 },
+            { time: 7.4, type: 'spike', x: STEP*29 },
+            { time: 7.4, type: 'spike', x: STEP*30 },
+
+            { time: 10.30, type: 'spike', x: 0 },
+            { time: 10.30, type: 'spike', x: STEP },
+            { time: 10.30, type: 'spike', x: STEP*2 },
+            { time: 10.30, type: 'spike', x: STEP*3 },
+            { time: 10.30, type: 'spike', x: STEP*4 },
+            { time: 10.30, type: 'spike', x: STEP*5 },
+            { time: 10.30, type: 'spike', x: STEP*6 },
+
+            { time: 11.00, type: 'spike', x: 0 },
+            { time: 11.00, type: 'spike', x: STEP },
+            { time: 11.00, type: 'block', x: STEP*1 },
+            { time: 11.00, type: 'spike', x: STEP*2 },
+            { time: 11.00, type: 'spike', x: STEP*3 },
+            { time: 11.00, type: 'block', x: STEP*4 },
+            { time: 11.00, type: 'spike', x: STEP*5 },
+            { time: 11.00, type: 'spike', x: STEP*6 },
+            { time: 11.00, type: 'block', x: STEP*7 },
+            { time: 11.00, type: 'spike', x: STEP*8 },
+            { time: 11.00, type: 'spike', x: STEP*9 },
+            { time: 11.00, type: 'block', x: STEP*10 },
+            { time: 11.00, type: 'spike', x: STEP*11 },
+            { time: 11.00, type: 'spike', x: STEP*12 },
+            { time: 11.00, type: 'block', x: STEP*13 },
+            { time: 11.00, type: 'block', x: STEP*14 },
+            { time: 11.00, type: 'block', x: STEP*15 },
+            { time: 11.00, type: 'block', x: STEP*16 },
+            { time: 11.00, type: 'block', x: STEP*17 },
+            { time: 11.00, type: 'block', x: STEP*18 },
+            { time: 11.00, type: 'block', x: STEP*19 },
+            { time: 11.00, type: 'block', x: STEP*20 },
+            { time: 11.00, type: 'block', x: STEP*21 },
+            { time: 11.00, type: 'block', x: STEP*22 },
+            { time: 11.00, type: 'spike', x: STEP*23 },
+            { time: 11.00, type: 'spike', x: STEP*24 },
+            { time: 11.00, type: 'spike', x: STEP*25 },
+            { time: 11.00, type: 'spike', x: STEP*26 },
+            { time: 11.00, type: 'spike', x: STEP*27 },
+            { time: 11.00, type: 'spike', x: STEP*28 },
+            { time: 11.00, type: 'spike', x: STEP*29 },
+
+            { time: 11.00, type: 'orb', x: STEP*6 },
+            { time: 11.00, type: 'orb', x: STEP*7 },
+            { time: 11.00, type: 'orb', x: STEP*17 },
+            { time: 11.00, type: 'orb', x: STEP*18 },
+            { time: 11.00, type: 'orb', x: STEP*19 },
+
+            { time: 13.50, type: 'platform', x: 0 },
+            { time: 13.50, type: 'platform', x: STEP },
+
+            { time: 13.50, type: 'spike', x: STEP*9 },
+            { time: 13.50, type: 'block', x: STEP*10 },
+            { time: 13.50, type: 'block', x: STEP*11 },
+            { time: 13.50, type: 'block', x: STEP*12 },
+            { time: 13.50, type: 'block', x: STEP*13 },
+            { time: 13.50, type: 'spike', x: STEP*14 },
+
+            { time: 13.50, type: 'platform', x: STEP*18 },
+            { time: 13.50, type: 'platform', x: STEP*19 },
+            { time: 13.50, type: 'platform', x: STEP*20 },
+            { time: 13.50, type: 'platform', x: STEP*21 },
+
+            { time: 13.50, type: 'orb', x: STEP*28 },
+            { time: 13.50, type: 'orb', x: STEP*29 },
+            { time: 13.50, type: 'orb', x: STEP*37 },
+            { time: 13.50, type: 'orb', x: STEP*38 },
+            { time: 13.50, type: 'orb', x: STEP*46 },
+            { time: 13.50, type: 'orb', x: STEP*47 },
+
+            { time: 13.50, type: 'platform', x: STEP*23 },
+            { time: 13.50, type: 'spike', x: STEP*25 },
+            { time: 13.50, type: 'block', x: STEP*27 },
+            { time: 13.50, type: 'spike', x: STEP*29 },
+            { time: 13.50, type: 'platform', x: STEP*31 },
+            { time: 13.50, type: 'block', x: STEP*33 },
+            { time: 13.50, type: 'platform', x: STEP*35 },
+            { time: 13.50, type: 'spike', x: STEP*37 },
+            { time: 13.50, type: 'block', x: STEP*39 },
+            { time: 13.50, type: 'spike', x: STEP*41 },
+            { time: 13.50, type: 'platform', x: STEP*42 },
+            { time: 13.50, type: 'platform', x: STEP*43 },
+            { time: 13.50, type: 'platform', x: STEP*44 },
+            { time: 13.50, type: 'block', x: STEP*45 },
+            { time: 13.50, type: 'block', x: STEP*48 },
+            { time: 13.50, type: 'block', x: STEP*51 },
+            { time: 13.50, type: 'spike', x: STEP*52 },
+            { time: 13.50, type: 'spike', x: STEP*53 },
+
+            { time: 17.50, type: 'spike', x: 0 },
+            { time: 17.50, type: 'spike', x: STEP },
+            { time: 17.50, type: 'spike', x: STEP*2 },
+            { time: 17.50, type: 'spike', x: STEP*3 },
+            { time: 17.50, type: 'spike', x: STEP*4 },
+            { time: 17.50, type: 'spike', x: STEP*5 },
+            { time: 17.50, type: 'spike', x: STEP*6 },
+            { time: 17.50, type: 'spike', x: STEP*7 },
+
+            { time: 18.50, type: 'spike', x: 0 },
+            { time: 18.50, type: 'spike', x: STEP },
+            { time: 18.50, type: 'spike', x: STEP*2 },
+            { time: 18.50, type: 'spike', x: STEP*3 },
+            { time: 18.50, type: 'spike', x: STEP*4 },
+            { time: 18.50, type: 'spike', x: STEP*5 },
+            { time: 18.50, type: 'spike', x: STEP*6 },
+            { time: 18.50, type: 'spike', x: STEP*7 },
+            { time: 18.50, type: 'spike', x: STEP*8 },
+            { time: 18.50, type: 'spike', x: STEP*9 },
+            { time: 18.50, type: 'spike', x: STEP*10 },
+            { time: 18.50, type: 'spike', x: STEP*11 },
+            { time: 18.50, type: 'spike', x: STEP*12 },
+            { time: 18.50, type: 'spike', x: STEP*13 },
+            { time: 18.50, type: 'spike', x: STEP*14 },
+            { time: 18.50, type: 'spike', x: STEP*15 },
+            { time: 18.50, type: 'spike', x: STEP*16 },
+            { time: 18.50, type: 'spike', x: STEP*17 },
+
+            { time: 18.50, type: 'orb', x: STEP*7 },
+            { time: 18.50, type: 'orb', x: STEP*6 },
+
+            { time: 20.50, type: 'spike', x: 0 },
+            { time: 20.50, type: 'spike', x: STEP },
+            { time: 20.50, type: 'spike', x: STEP*2 },
+            { time: 20.50, type: 'spike', x: STEP*3 },
+            { time: 20.50, type: 'spike', x: STEP*4 },
+            { time: 20.50, type: 'spike', x: STEP*5 },
+            { time: 20.50, type: 'spike', x: STEP*6 },
+            { time: 20.50, type: 'spike', x: STEP*7 },
+            { time: 20.50, type: 'spike', x: STEP*8 },
+            { time: 20.50, type: 'spike', x: STEP*9 },
+
+            { time: 22.50, type: 'spike', x: 0 },
+            { time: 22.50, type: 'spike', x: STEP },
+            { time: 22.50, type: 'spike', x: STEP*2 },
+            { time: 22.50, type: 'spike', x: STEP*3 },
+            { time: 22.50, type: 'spike', x: STEP*4 },
+            { time: 22.50, type: 'spike', x: STEP*5 },
+            { time: 22.50, type: 'spike', x: STEP*6 },
+            { time: 22.50, type: 'spike', x: STEP*7 },
+            { time: 22.50, type: 'spike', x: STEP*8 },
+            { time: 22.50, type: 'spike', x: STEP*9 },
+
+            { time: 23.70, type: 'spike', x: 0 },
+            { time: 23.70, type: 'spike', x: STEP },
+            { time: 23.70, type: 'spike', x: STEP*2 },
+            { time: 23.70, type: 'spike', x: STEP*3 },
+            { time: 23.70, type: 'spike', x: STEP*4 },
+            { time: 23.70, type: 'spike', x: STEP*5 },
+            { time: 23.70, type: 'spike', x: STEP*6 },
+            { time: 23.70, type: 'spike', x: STEP*7 },
+            { time: 23.70, type: 'spike', x: STEP*8 },
+            { time: 23.70, type: 'spike', x: STEP*9 },
+
+            { time: 25.70, type: 'spike', x: 0 },
+            { time: 25.70, type: 'spike', x: STEP },
+            { time: 25.70, type: 'spike', x: STEP*2 },
+            { time: 25.70, type: 'spike', x: STEP*3 },
+            { time: 25.70, type: 'spike', x: STEP*4 },
+            { time: 25.70, type: 'spike', x: STEP*5 },
+            { time: 25.70, type: 'spike', x: STEP*6 },
+            { time: 25.70, type: 'spike', x: STEP*7 },
+
+            { time: 26.70, type: 'orb', x: 0 },
+
+
         ]
     }
 };
@@ -1075,6 +1383,8 @@ canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
     isHoldingJump = false;
 });
+
+// TODO: add particle effect when clicking in menu
 
 // Keyboard input
 document.addEventListener('keydown', (e) => {
