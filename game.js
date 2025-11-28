@@ -10,11 +10,25 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Set initial canvas size
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 function resizeCanvas() {
-    canvas.width = Math.min(window.innerWidth, 800);
-    canvas.height = Math.min(window.innerHeight, 600);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Update ground position based on canvas height
+    if (typeof ground !== 'undefined') {
+        ground.y = canvas.height - 80;
+
+        // Update player position if on ground
+        if (typeof player !== 'undefined' && !player.isJumping) {
+            player.y = ground.y - player.height;
+        }
+    }
 }
-resizeCanvas();
+
 window.addEventListener('resize', resizeCanvas);
 
 
