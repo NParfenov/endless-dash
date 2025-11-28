@@ -20,7 +20,7 @@ function resizeCanvas() {
 
     // Update ground position based on canvas height
     if (typeof ground !== 'undefined') {
-        ground.y = canvas.height - 80;
+        ground.y = canvas.height - 200;
 
         // Update player position if on ground
         if (typeof player !== 'undefined' && !player.isJumping) {
@@ -198,7 +198,7 @@ const player = {
 // ===================================
 
 const ground = {
-    y: canvas.height - 80,
+    y: canvas.height - 200,
     height: 80,
     color: '#1a1a2e'
 };
@@ -765,8 +765,8 @@ function draw() {
 
     // ===== Ground =====
     ctx.fillStyle = ground.color;
-    ctx.fillRect(0, ground.y, canvas.width, ground.height);
-    
+    ctx.fillRect(0, ground.y, canvas.width, canvas.height - ground.y);
+
     ctx.strokeStyle = '#00d4ff';
     ctx.lineWidth = 3;
     ctx.beginPath();
