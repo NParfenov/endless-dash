@@ -24,11 +24,11 @@ window.addEventListener('resize', resizeCanvas);
 
 // Music tracks - Using free energetic electronic music from pixabay.com (royalty-free)
 const musicTracks = {
-    menu: 'https://cdn.pixabay.com/audio/2022/03/24/audio_c2f9e6169f.mp3', // Upbeat electronic menu
-    level1: 'https://cdn.pixabay.com/audio/2022/08/04/audio_884fe88c21.mp3', // Energetic techno - Level 1
-    level2: 'https://cdn.pixabay.com/audio/2022/11/22/audio_134e5e784c.mp3', // Fast electronic - Level 2
-    level3: 'https://cdn.pixabay.com/audio/2024/07/30/audio_33bfac848f.mp3', // Intense electronic - Level 3
-    endless: 'https://cdn.pixabay.com/audio/2023/10/30/audio_0d021e11d7.mp3' // High energy endless loop
+    menu: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3', // Upbeat electronic menu
+    level1: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3', // Energetic techno - Level 1
+    level2: 'https://cdn.pixabay.com/audio/2025/05/21/audio_fa20813ea6.mp3', // Fast electronic - Level 2
+    level3: 'https://cdn.pixabay.com/audio/2025/08/30/audio_00ae00f400.mp3', // Intense electronic - Level 3
+    endless: 'https://audio.ngfiles.com/952000/952542_naither.mp3?f1595965602' // High energy endless loop
 };
 
 // Audio objects
@@ -51,9 +51,9 @@ function initMusic() {
         
         // Set all music to loop
         menuMusic.loop = true;
-        level1Music.loop = true;
-        level2Music.loop = true;
-        level3Music.loop = true;
+        level1Music.loop = false;
+        level2Music.loop = false;
+        level3Music.loop = false;
         endlessMusic.loop = true;
         
         // Set volume
