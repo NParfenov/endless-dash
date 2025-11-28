@@ -37,6 +37,50 @@ window.addEventListener('resize', resizeCanvas);
 // ===================================
 
 const Game = {
+    // Menu particles
+    menuParticles: {
+        list: [],
+
+        init() {
+            // Create initial menu particles
+            for (let i = 0; i < 30; i++) {
+                this.list.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: Math.random() * 4 + 2,
+                    color: Math.random() > 0.5 ? '#00d4ff' : '#ffffff',
+                    alpha: Math.random() * 0.5 + 0.3
+                });
+            }
+        },
+
+        update() {
+            this.list.forEach(particle => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+
+                // Wrap around screen edges
+                if (particle.x < 0) particle.x = canvas.width;
+                if (particle.x > canvas.width) particle.x = 0;
+                if (particle.y < 0) particle.y = canvas.height;
+                if (particle.y > canvas.height) particle.y = 0;
+            });
+        },
+
+        draw(ctx) {
+            this.list.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.alpha;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+    },
+
     // Particle system
     particles: {
         list: [],
@@ -521,6 +565,7 @@ const Game = {
         gameState = 'menu';
         gameRunning = false;
         this.audio.play('menu');
+        this.menuLoop(); // Restart menu animation
     },
 
     gameOver() {
@@ -725,6 +770,36 @@ const Game = {
                     clearInterval(particleLoop);
                 }
             }, 1000 / 60);
+        }
+    },
+
+    // Menu animation loop
+    menuLoop() {
+        if (gameState === 'menu') {
+            // Increment menu frame counter
+            if (!this.menuFrameCount) this.menuFrameCount = 0;
+            this.menuFrameCount++;
+
+            const menuSpeed = 5; // Same as game speed 5
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw scrolling background grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i - (this.menuFrameCount * menuSpeed % 40), 0);
+                ctx.lineTo(i - (this.menuFrameCount * menuSpeed % 40), canvas.height);
+                ctx.stroke();
+            }
+
+            // Update and draw menu particles
+            this.menuParticles.update();
+            this.menuParticles.draw(ctx);
+
+            requestAnimationFrame(() => this.menuLoop());
         }
     }
 };
@@ -1003,3 +1078,12 @@ document.getElementById('nextLevelBtn').addEventListener('click', () => {
         Game.showMenu();
     }
 });
+
+
+// ===================================
+// INITIALIZE MENU
+// ===================================
+
+// Initialize menu particles and start menu animation
+Game.menuParticles.init();
+Game.menuLoop();
