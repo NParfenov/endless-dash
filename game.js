@@ -270,12 +270,12 @@ const Game = {
     // Audio system
     audio: {
         tracks: {
-            menu: 'https://cdn.pixabay.com/audio/2025/03/07/audio_b9b664b09c.mp3',
-            level1: 'https://cdn.pixabay.com/audio/2024/11/05/audio_a043da5a4b.mp3',
-            level2: 'https://cdn.pixabay.com/audio/2025/05/21/audio_fa20813ea6.mp3',
-            level3: 'https://cdn.pixabay.com/audio/2025/06/07/audio_a67e673ed7.mp3',
-            level4: 'https://cdn.pixabay.com/audio/2025/05/24/audio_2700972abb.mp3',
-            endless: 'https://audio.ngfiles.com/952000/952542_naither.mp3?f1595965602'
+            menu: './audio/audio_b9b664b09c.mp3',
+            level1: './audio/audio_a043da5a4b.mp3',
+            level2: './audio/audio_fa20813ea6.mp3',
+            level3: './audio/audio_a67e673ed7.mp3',
+            level4: './audio/audio_2700972abb.mp3',
+            endless: './audio/952542_naither.mp3'
         },
         menuMusic: null,
         level1Music: null,
