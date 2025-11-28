@@ -23,8 +23,8 @@ function resizeCanvas() {
         ground.y = canvas.height - 200;
 
         // Update player position if on ground
-        if (typeof player !== 'undefined' && !player.isJumping) {
-            player.y = ground.y - player.height;
+        if (typeof Game.player !== 'undefined' && !Game.player.isJumping) {
+            Game.player.y = ground.y - Game.player.height;
         }
     }
 }
@@ -72,6 +72,133 @@ const Game = {
                 ctx.fillRect(particle.x, particle.y, 4, 4);
                 ctx.globalAlpha = 1;
             });
+        }
+    },
+
+    // Player
+    player: {
+        x: 100,
+        y: 0,
+        width: 40,
+        height: 40,
+        velocityY: 0,
+        gravity: 0.8,
+        jumpPower: -15,
+        isJumping: false,
+        rotation: 0,
+        color: '#00d4ff',
+
+        jump() {
+            if (!gameRunning) return;
+
+            // Check for orb activation (double jump)
+            for (let obstacle of Game.obstacles.list) {
+                if (obstacle.type === 'orb' && !obstacle.activated && checkCollision(Game.player, obstacle)) {
+                    Game.player.velocityY = Game.player.jumpPower;
+                    obstacle.activated = true;
+                    Game.particles.create(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.color);
+                    Game.particles.create(Game.player.x + Game.player.width / 2, Game.player.y + Game.player.height / 2, Game.player.color);
+                    Game.player.isJumping = true;
+                    return;
+                }
+            }
+
+            // Normal jump (only when on ground)
+            if (!Game.player.isJumping && gameRunning) {
+                Game.player.velocityY = Game.player.jumpPower;
+                Game.player.isJumping = true;
+                Game.particles.create(Game.player.x + Game.player.width / 2, Game.player.y + Game.player.height, Game.player.color);
+            }
+        }
+    },
+
+    // Obstacles
+    obstacles: {
+        list: [],
+
+        create(type, xOffset = 0) {
+            if (type === 'spike') {
+                this.list.push({
+                    x: canvas.width + xOffset,
+                    y: ground.y - 40,
+                    width: 40,
+                    height: 40,
+                    type: 'spike',
+                    color: '#ff6b6b'
+                });
+            }
+            else if (type === 'block') {
+                this.list.push({
+                    x: canvas.width + xOffset,
+                    y: ground.y - 60,
+                    width: 60,
+                    height: 60,
+                    type: 'block',
+                    color: '#ff4444'
+                });
+            }
+            else if (type === 'platform') {
+                this.list.push({
+                    x: canvas.width + xOffset,
+                    y: ground.y - 60,
+                    width: 60,
+                    height: 60,
+                    type: 'platform',
+                    color: '#4ecca3'
+                });
+            }
+            else if (type === 'orb') {
+                this.list.push({
+                    x: canvas.width + xOffset,
+                    y: ground.y - 150,
+                    width: 30,
+                    height: 30,
+                    type: 'orb',
+                    color: '#ffd93d',
+                    activated: false,
+                    pulsePhase: 0
+                });
+            }
+        },
+
+        createRandom() {
+            const types = ['spike', 'block', 'platform', 'double', 'triple', 'platformHop', 'orb', 'longSpikes'];
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            if (type === 'spike') {
+                this.create('spike');
+            }
+            else if (type === 'block') {
+                this.create('block');
+            }
+            else if (type === 'platform') {
+                this.create('platform');
+            }
+            else if (type === 'double') {
+                this.create('spike', 0);
+                this.create('spike', 40);
+            }
+            else if (type === 'triple') {
+                this.create('spike', 0);
+                this.create('spike', 40);
+                this.create('spike', 80);
+            }
+            else if (type === 'platformHop') {
+                this.create('platform', 0);
+                this.create('platform', 150);
+            }
+            else if (type === 'orb') {
+                this.create('orb', 0);
+            }
+            else if (type === 'longSpikes') {
+                // 5 spikes with orb above
+                this.create('spike', 0);
+                this.create('spike', 40);
+                this.create('spike', 80);
+                this.create('spike', 120);
+                this.create('spike', 160);
+                this.create('orb', 80);
+            }
         }
     }
 };
@@ -211,8 +338,7 @@ let frameCount = 0;
 let isHoldingJump = false;
 let lastSpeedIncreaseScore = 0;
 
-// Obstacle spawning variables
-let obstacles = [];
+// Obstacle spawning variables (obstacles.list now in Game.obstacles)
 let obstacleTimer = 0;
 let obstacleSpawnRate = 90; // frames between obstacles in endless mode
 
@@ -220,21 +346,8 @@ let obstacleSpawnRate = 90; // frames between obstacles in endless mode
 
 
 // ===================================
-// PLAYER OBJECT
+// PLAYER OBJECT (now in Game.player)
 // ===================================
-
-const player = {
-    x: 100,
-    y: 0,
-    width: 40,
-    height: 40,
-    velocityY: 0,
-    gravity: 0.8,
-    jumpPower: -15,
-    isJumping: false,
-    rotation: 0,
-    color: '#00d4ff'
-};
 
 
 // ===================================
@@ -247,7 +360,7 @@ const ground = {
     color: '#1a1a2e'
 };
 
-player.y = ground.y - player.height;
+Game.player.y = ground.y - Game.player.height;
 
 
 // ===================================
@@ -412,12 +525,12 @@ function startEndless() {
 function resetGame() {
     score = 0;
     frameCount = 0;
-    obstacles = [];
+    Game.obstacles.list = [];
     Game.particles.list = [];
-    player.y = ground.y - player.height;
-    player.velocityY = 0;
-    player.isJumping = false;
-    player.rotation = 0;
+    Game.player.y = ground.y - Game.player.height;
+    Game.player.velocityY = 0;
+    Game.player.isJumping = false;
+    Game.player.rotation = 0;
     obstacleTimer = 0;
     lastSpeedIncreaseScore = 0;
     document.getElementById('score').textContent = score;
@@ -438,93 +551,8 @@ function showMenu() {
 
 
 // ===================================
-// OBSTACLE CREATION
+// OBSTACLE CREATION (now in Game.obstacles)
 // ===================================
-
-function createObstacle(type, xOffset = 0) {
-    if (type === 'spike') {
-        obstacles.push({
-            x: canvas.width + xOffset,
-            y: ground.y - 40,
-            width: 40,
-            height: 40,
-            type: 'spike',
-            color: '#ff6b6b'
-        });
-    } 
-    else if (type === 'block') {
-        obstacles.push({
-            x: canvas.width + xOffset,
-            y: ground.y - 60,
-            width: 60,
-            height: 60,
-            type: 'block',
-            color: '#ff4444'
-        });
-    } 
-    else if (type === 'platform') {
-        obstacles.push({
-            x: canvas.width + xOffset,
-            y: ground.y - 60,
-            width: 60,
-            height: 60,
-            type: 'platform',
-            color: '#4ecca3'
-        });
-    } 
-    else if (type === 'orb') {
-        obstacles.push({
-            x: canvas.width + xOffset,
-            y: ground.y - 150,
-            width: 30,
-            height: 30,
-            type: 'orb',
-            color: '#ffd93d',
-            activated: false,
-            pulsePhase: 0
-        });
-    }
-}
-
-function createRandomObstacle() {
-    const types = ['spike', 'block', 'platform', 'double', 'triple', 'platformHop', 'orb', 'longSpikes'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    
-    if (type === 'spike') {
-        createObstacle('spike');
-    } 
-    else if (type === 'block') {
-        createObstacle('block');
-    } 
-    else if (type === 'platform') {
-        createObstacle('platform');
-    } 
-    else if (type === 'double') {
-        createObstacle('spike', 0);
-        createObstacle('spike', 40);
-    } 
-    else if (type === 'triple') {
-        createObstacle('spike', 0);
-        createObstacle('spike', 40);
-        createObstacle('spike', 80);
-    } 
-    else if (type === 'platformHop') {
-        createObstacle('platform', 0);
-        createObstacle('platform', 150);
-    } 
-    else if (type === 'orb') {
-        createObstacle('orb', 0);
-    } 
-    else if (type === 'longSpikes') {
-        // 5 spikes with orb above
-        createObstacle('spike', 0);
-        createObstacle('spike', 40);
-        createObstacle('spike', 80);
-        createObstacle('spike', 120);
-        createObstacle('spike', 160);
-        createObstacle('orb', 80);
-    }
-}
 
 
 // ===================================
@@ -533,31 +561,8 @@ function createRandomObstacle() {
 
 
 // ===================================
-// PLAYER ACTIONS
+// PLAYER ACTIONS (now in Game.player)
 // ===================================
-
-function jump() {
-    if (!gameRunning) return;
-    
-    // Check for orb activation (double jump)
-    for (let obstacle of obstacles) {
-        if (obstacle.type === 'orb' && !obstacle.activated && checkCollision(player, obstacle)) {
-            player.velocityY = player.jumpPower;
-            obstacle.activated = true;
-            Game.particles.create(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.color);
-            Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, player.color);
-            player.isJumping = true;
-            return;
-        }
-    }
-    
-    // Normal jump (only when on ground)
-    if (!player.isJumping && gameRunning) {
-        player.velocityY = player.jumpPower;
-        player.isJumping = true;
-        Game.particles.create(player.x + player.width / 2, player.y + player.height, player.color);
-    }
-}
 
 
 // ===================================
@@ -567,7 +572,7 @@ function jump() {
 // Mouse input
 canvas.addEventListener('mousedown', () => {
     isHoldingJump = true;
-    if (gameRunning) jump();
+    if (gameRunning) Game.player.jump();
 });
 
 canvas.addEventListener('mouseup', () => {
@@ -578,7 +583,7 @@ canvas.addEventListener('mouseup', () => {
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     isHoldingJump = true;
-    if (gameRunning) jump();
+    if (gameRunning) Game.player.jump();
 });
 
 canvas.addEventListener('touchend', (e) => {
@@ -592,7 +597,7 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         if (!isHoldingJump) {
             isHoldingJump = true;
-            jump();
+            Game.player.jump();
         }
     }
 });
@@ -715,7 +720,7 @@ function update() {
         document.getElementById('progress').textContent = `Progress: ${progress}%`;
 
         // Check level completion
-        if (frameCount >= levelData.duration && obstacles.length === 0) {
+        if (frameCount >= levelData.duration && Game.obstacles.list.length === 0) {
             levelComplete();
             return;
         }
@@ -723,14 +728,14 @@ function update() {
         // Spawn level obstacles
         const obstaclesAtFrame = levelData.obstacles.filter(obs => obs.frame === frameCount);
         obstaclesAtFrame.forEach(obstacleData => {
-            createObstacle(obstacleData.type, obstacleData.x);
+            Game.obstacles.create(obstacleData.type, obstacleData.x);
         });
     } 
     // ===== Endless Mode Logic =====
     else {
         obstacleTimer++;
         if (obstacleTimer > obstacleSpawnRate) {
-            createRandomObstacle();
+            Game.obstacles.createRandom();
             obstacleTimer = 0;
         }
 
@@ -743,55 +748,55 @@ function update() {
     }
 
     // ===== Player Physics =====
-    player.velocityY += player.gravity;
-    player.y += player.velocityY;
+    Game.player.velocityY += Game.player.gravity;
+    Game.player.y += Game.player.velocityY;
 
     // Ground collision
-    if (player.y + player.height >= ground.y) {
-        player.y = ground.y - player.height;
-        player.velocityY = 0;
-        player.isJumping = false;
-        player.rotation = Math.round(player.rotation / 90) * 90;
+    if (Game.player.y + Game.player.height >= ground.y) {
+        Game.player.y = ground.y - Game.player.height;
+        Game.player.velocityY = 0;
+        Game.player.isJumping = false;
+        Game.player.rotation = Math.round(Game.player.rotation / 90) * 90;
     }
 
     // Hold-to-jump on ground
-    if (isHoldingJump && !player.isJumping && player.y + player.height >= ground.y - 1) {
-        jump();
+    if (isHoldingJump && !Game.player.isJumping && Game.player.y + Game.player.height >= ground.y - 1) {
+        Game.player.jump();
     }
 
     // Rotate cube while jumping
-    if (player.isJumping) {
-        player.rotation += 8;
+    if (Game.player.isJumping) {
+        Game.player.rotation += 8;
     }
 
     // ===== Update Obstacles =====
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        obstacles[i].x -= gameSpeed;
+    for (let i = Game.obstacles.list.length - 1; i >= 0; i--) {
+        Game.obstacles.list[i].x -= gameSpeed;
 
         // Collision detection
         let collision = false;
 
         // Use triangular collision for spikes
-        if (obstacles[i].type === 'spike') {
-            collision = checkTriangleCollision(player, obstacles[i]);
+        if (Game.obstacles.list[i].type === 'spike') {
+            collision = checkTriangleCollision(Game.player, Game.obstacles.list[i]);
         } else {
-            collision = checkCollision(player, obstacles[i]);
+            collision = checkCollision(Game.player, Game.obstacles.list[i]);
         }
 
         if (collision) {
             // Orbs are not deadly
-            if (obstacles[i].type === 'orb') {
+            if (Game.obstacles.list[i].type === 'orb') {
                 continue;
             }
             // Platform safe landing
-            else if (obstacles[i].type === 'platform' && isLandingOnTop(player, obstacles[i])) {
-                player.y = obstacles[i].y - player.height;
-                player.velocityY = 0;
-                player.isJumping = false;
-                player.rotation = Math.round(player.rotation / 90) * 90;
+            else if (Game.obstacles.list[i].type === 'platform' && isLandingOnTop(Game.player, Game.obstacles.list[i])) {
+                Game.player.y = Game.obstacles.list[i].y - Game.player.height;
+                Game.player.velocityY = 0;
+                Game.player.isJumping = false;
+                Game.player.rotation = Math.round(Game.player.rotation / 90) * 90;
 
                 if (isHoldingJump) {
-                    jump();
+                    Game.player.jump();
                 }
             }
             // Deadly collision
@@ -802,12 +807,12 @@ function update() {
         }
 
         // Update orb animation
-        if (obstacles[i].type === 'orb') {
-            obstacles[i].pulsePhase += 0.1;
+        if (Game.obstacles.list[i].type === 'orb') {
+            Game.obstacles.list[i].pulsePhase += 0.1;
         }
 
         // Remove off-screen obstacles
-        if (obstacles[i].x + obstacles[i].width < 0) {
+        if (Game.obstacles.list[i].x + Game.obstacles.list[i].width < 0) {
             obstacles.splice(i, 1);
             score++;
             document.getElementById('score').textContent = score;
@@ -851,7 +856,7 @@ function draw() {
     ctx.stroke();
 
     // ===== Obstacles =====
-    obstacles.forEach(obstacle => {
+    Game.obstacles.list.forEach(obstacle => {
         if (obstacle.type === 'spike') {
             drawSpike(obstacle);
         } 
@@ -947,30 +952,30 @@ function drawOrb(obstacle) {
 
 function drawPlayer() {
     ctx.save();
-    ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
-    ctx.rotate(player.rotation * Math.PI / 180);
+    ctx.translate(Game.player.x + Game.player.width / 2, Game.player.y + Game.player.height / 2);
+    ctx.rotate(Game.player.rotation * Math.PI / 180);
 
     // Glow effect
     ctx.shadowBlur = 20;
-    ctx.shadowColor = player.color;
-    ctx.strokeStyle = player.color;
+    ctx.shadowColor = Game.player.color;
+    ctx.strokeStyle = Game.player.color;
     ctx.lineWidth = 2;
-    ctx.strokeRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    ctx.strokeRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
     ctx.shadowBlur = 0;
 
     // Cube body
-    ctx.fillStyle = player.color;
-    ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    ctx.fillStyle = Game.player.color;
+    ctx.fillRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
 
     // Cube outline
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 3;
-    ctx.strokeRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    ctx.strokeRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
 
     // Inner detail
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(-player.width / 2 + 5, -player.height / 2 + 5, player.width - 10, player.height - 10);
+    ctx.strokeRect(-Game.player.width / 2 + 5, -Game.player.height / 2 + 5, Game.player.width - 10, Game.player.height - 10);
 
     ctx.restore();
 }
