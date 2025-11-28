@@ -93,7 +93,7 @@ const Game = {
 
             // Check for orb activation (double jump)
             for (let obstacle of Game.obstacles.list) {
-                if (obstacle.type === 'orb' && !obstacle.activated && checkCollision(Game.player, obstacle)) {
+                if (obstacle.type === 'orb' && !obstacle.activated && Game.physics.checkCollision(Game.player, obstacle)) {
                     Game.player.velocityY = Game.player.jumpPower;
                     obstacle.activated = true;
                     Game.particles.create(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.color);
@@ -301,6 +301,431 @@ const Game = {
                 this.stop();
             }
         }
+    },
+
+    // Physics
+    physics: {
+        checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        },
+
+        pointInTriangle(px, py, x1, y1, x2, y2, x3, y3) {
+            const denominator = ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+            const a = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denominator;
+            const b = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denominator;
+            const c = 1 - a - b;
+
+            return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
+        },
+
+        checkTriangleCollision(rect, triangle) {
+            // Triangle points for spike: bottom-left, top-center, bottom-right
+            const x1 = triangle.x;
+            const y1 = triangle.y + triangle.height;
+            const x2 = triangle.x + triangle.width / 2;
+            const y2 = triangle.y;
+            const x3 = triangle.x + triangle.width;
+            const y3 = triangle.y + triangle.height;
+
+            // Check if any corner of the rectangle is inside the triangle
+            const corners = [
+                { x: rect.x, y: rect.y },
+                { x: rect.x + rect.width, y: rect.y },
+                { x: rect.x, y: rect.y + rect.height },
+                { x: rect.x + rect.width, y: rect.y + rect.height }
+            ];
+
+            for (let corner of corners) {
+                if (this.pointInTriangle(corner.x, corner.y, x1, y1, x2, y2, x3, y3)) {
+                    return true;
+                }
+            }
+
+            // Check if triangle peak is inside rectangle
+            if (x2 >= rect.x && x2 <= rect.x + rect.width &&
+                y2 >= rect.y && y2 <= rect.y + rect.height) {
+                return true;
+            }
+
+            return false;
+        },
+
+        isLandingOnTop(playerRect, obstacleRect) {
+            const bottomY = playerRect.y + playerRect.height;
+            const tolerance = 15;
+
+            return bottomY >= obstacleRect.y &&
+                   bottomY <= obstacleRect.y + tolerance &&
+                   playerRect.velocityY >= 0;
+        }
+    },
+
+    // Renderer
+    renderer: {
+        drawSpike(obstacle) {
+            ctx.fillStyle = obstacle.color;
+            ctx.beginPath();
+            ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
+            ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y);
+            ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        },
+
+        drawBlock(obstacle) {
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        },
+
+        drawPlatform(obstacle) {
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+            // Safe top indicator
+            ctx.strokeStyle = '#6fffb0';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(obstacle.x, obstacle.y);
+            ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
+            ctx.stroke();
+        },
+
+        drawOrb(obstacle) {
+            const centerX = obstacle.x + obstacle.width / 2;
+            const centerY = obstacle.y + obstacle.height / 2;
+            const pulseSize = obstacle.activated ? 0.5 : 1 + Math.sin(obstacle.pulsePhase) * 0.15;
+            const radius = (obstacle.width / 2) * pulseSize;
+
+            // Outer glow
+            if (!obstacle.activated) {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = obstacle.color;
+            }
+
+            // Orb circle
+            ctx.fillStyle = obstacle.activated ? 'rgba(255, 217, 61, 0.3)' : obstacle.color;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Outline
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Inner shine
+            if (!obstacle.activated) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.shadowBlur = 0;
+        },
+
+        drawPlayer() {
+            ctx.save();
+            ctx.translate(Game.player.x + Game.player.width / 2, Game.player.y + Game.player.height / 2);
+            ctx.rotate(Game.player.rotation * Math.PI / 180);
+
+            // Glow effect
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = Game.player.color;
+            ctx.strokeStyle = Game.player.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
+            ctx.shadowBlur = 0;
+
+            // Cube body
+            ctx.fillStyle = Game.player.color;
+            ctx.fillRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
+
+            // Cube outline
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
+
+            // Inner detail
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-Game.player.width / 2 + 5, -Game.player.height / 2 + 5, Game.player.width - 10, Game.player.height - 10);
+
+            ctx.restore();
+        }
+    },
+
+    // Game state and control methods
+    startLevel(level) {
+        currentLevel = level;
+        currentMode = 'level';
+        const levelData = levels[level];
+        gameSpeed = levelData.speed;
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('levelName').textContent = levelData.name;
+        this.reset();
+        gameState = 'playing';
+        gameRunning = true;
+        this.audio.play('level' + level);
+        this.loop();
+    },
+
+    startEndless() {
+        currentMode = 'endless';
+        gameSpeed = 5;
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('levelName').textContent = 'Endless Mode';
+        document.getElementById('progress').textContent = '';
+        this.reset();
+        gameState = 'playing';
+        gameRunning = true;
+        this.audio.play('endless');
+        this.loop();
+    },
+
+    reset() {
+        score = 0;
+        frameCount = 0;
+        this.obstacles.list = [];
+        this.particles.list = [];
+        this.player.y = ground.y - this.player.height;
+        this.player.velocityY = 0;
+        this.player.isJumping = false;
+        this.player.rotation = 0;
+        obstacleTimer = 0;
+        lastSpeedIncreaseScore = 0;
+        document.getElementById('score').textContent = score;
+        document.getElementById('ui').style.display = 'block';
+        document.getElementById('instructions').style.display = 'block';
+    },
+
+    showMenu() {
+        document.getElementById('gameOver').style.display = 'none';
+        document.getElementById('levelComplete').style.display = 'none';
+        document.getElementById('ui').style.display = 'none';
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('mainMenu').style.display = 'block';
+        gameState = 'menu';
+        gameRunning = false;
+        this.audio.play('menu');
+    },
+
+    gameOver() {
+        gameRunning = false;
+        gameState = 'gameOver';
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('gameOver').style.display = 'block';
+        document.getElementById('instructions').style.display = 'none';
+    },
+
+    levelComplete() {
+        gameRunning = false;
+        gameState = 'levelComplete';
+        document.getElementById('levelScore').textContent = score;
+        document.getElementById('levelComplete').style.display = 'block';
+        document.getElementById('instructions').style.display = 'none';
+
+        // Update next level button
+        if (currentLevel >= 3) {
+            document.getElementById('nextLevelBtn').textContent = 'Back to Menu';
+        } else {
+            document.getElementById('nextLevelBtn').textContent = 'Next Level';
+        }
+    },
+
+    update() {
+        if (!gameRunning) return;
+
+        frameCount++;
+
+        // ===== Level Mode Logic =====
+        if (currentMode === 'level') {
+            const levelData = levels[currentLevel];
+            const progress = Math.min(100, Math.floor((frameCount / levelData.duration) * 100));
+            document.getElementById('progress').textContent = `Progress: ${progress}%`;
+
+            // Check level completion
+            if (frameCount >= levelData.duration && this.obstacles.list.length === 0) {
+                this.levelComplete();
+                return;
+            }
+
+            // Spawn level obstacles
+            const obstaclesAtFrame = levelData.obstacles.filter(obs => obs.frame === frameCount);
+            obstaclesAtFrame.forEach(obstacleData => {
+                this.obstacles.create(obstacleData.type, obstacleData.x);
+            });
+        }
+        // ===== Endless Mode Logic =====
+        else {
+            obstacleTimer++;
+            if (obstacleTimer > obstacleSpawnRate) {
+                this.obstacles.createRandom();
+                obstacleTimer = 0;
+            }
+
+            // Increase difficulty every 10 obstacles
+            if (score > 0 && score >= lastSpeedIncreaseScore + 10) {
+                gameSpeed += 0.5;
+                obstacleSpawnRate = Math.max(50, obstacleSpawnRate - 5);
+                lastSpeedIncreaseScore = score;
+            }
+        }
+
+        // ===== Player Physics =====
+        this.player.velocityY += this.player.gravity;
+        this.player.y += this.player.velocityY;
+
+        // Ground collision
+        if (this.player.y + this.player.height >= ground.y) {
+            this.player.y = ground.y - this.player.height;
+            this.player.velocityY = 0;
+            this.player.isJumping = false;
+            this.player.rotation = Math.round(this.player.rotation / 90) * 90;
+        }
+
+        // Hold-to-jump on ground
+        if (isHoldingJump && !this.player.isJumping && this.player.y + this.player.height >= ground.y - 1) {
+            this.player.jump();
+        }
+
+        // Rotate cube while jumping
+        if (this.player.isJumping) {
+            this.player.rotation += 8;
+        }
+
+        // ===== Update Obstacles =====
+        for (let i = this.obstacles.list.length - 1; i >= 0; i--) {
+            this.obstacles.list[i].x -= gameSpeed;
+
+            // Collision detection
+            let collision = false;
+
+            // Use triangular collision for spikes
+            if (this.obstacles.list[i].type === 'spike') {
+                collision = this.physics.checkTriangleCollision(this.player, this.obstacles.list[i]);
+            } else {
+                collision = this.physics.checkCollision(this.player, this.obstacles.list[i]);
+            }
+
+            if (collision) {
+                // Orbs are not deadly
+                if (this.obstacles.list[i].type === 'orb') {
+                    continue;
+                }
+                // Platform safe landing
+                else if (this.obstacles.list[i].type === 'platform' && this.physics.isLandingOnTop(this.player, this.obstacles.list[i])) {
+                    this.player.y = this.obstacles.list[i].y - this.player.height;
+                    this.player.velocityY = 0;
+                    this.player.isJumping = false;
+                    this.player.rotation = Math.round(this.player.rotation / 90) * 90;
+
+                    if (isHoldingJump) {
+                        this.player.jump();
+                    }
+                }
+                // Deadly collision
+                else {
+                    this.gameOver();
+                    return;
+                }
+            }
+
+            // Update orb animation
+            if (this.obstacles.list[i].type === 'orb') {
+                this.obstacles.list[i].pulsePhase += 0.1;
+            }
+
+            // Remove off-screen obstacles
+            if (this.obstacles.list[i].x + this.obstacles.list[i].width < 0) {
+                this.obstacles.list.splice(i, 1);
+                score++;
+                document.getElementById('score').textContent = score;
+            }
+        }
+
+        // ===== Update Particles =====
+        this.particles.update();
+    },
+
+    draw() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (gameState === 'menu') return;
+
+        // ===== Background Grid =====
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i - (frameCount * gameSpeed % 40), 0);
+            ctx.lineTo(i - (frameCount * gameSpeed % 40), canvas.height);
+            ctx.stroke();
+        }
+
+        // ===== Ground =====
+        ctx.fillStyle = ground.color;
+        ctx.fillRect(0, ground.y, canvas.width, canvas.height - ground.y);
+
+        ctx.strokeStyle = '#00d4ff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, ground.y);
+        ctx.lineTo(canvas.width, ground.y);
+        ctx.stroke();
+
+        // ===== Obstacles =====
+        this.obstacles.list.forEach(obstacle => {
+            if (obstacle.type === 'spike') {
+                this.renderer.drawSpike(obstacle);
+            }
+            else if (obstacle.type === 'platform') {
+                this.renderer.drawPlatform(obstacle);
+            }
+            else if (obstacle.type === 'orb') {
+                this.renderer.drawOrb(obstacle);
+            }
+            else {
+                this.renderer.drawBlock(obstacle);
+            }
+        });
+
+        // ===== Particles =====
+        this.particles.draw(ctx);
+
+        // ===== Player =====
+        this.renderer.drawPlayer();
+    },
+
+    loop() {
+        this.update();
+        this.draw();
+
+        if (gameRunning) {
+            requestAnimationFrame(() => this.loop());
+        } else if (this.particles.list.length > 0) {
+            // Continue drawing particles after game ends
+            let particleLoop = setInterval(() => {
+                this.draw();
+                if (this.particles.list.length === 0) {
+                    clearInterval(particleLoop);
+                }
+            }, 1000 / 60);
+        }
     }
 };
 
@@ -488,63 +913,6 @@ const levels = {
 };
 
 
-// ===================================
-// GAME MODE FUNCTIONS
-// ===================================
-
-function startLevel(level) {
-    currentLevel = level;
-    currentMode = 'level';
-    const levelData = levels[level];
-    gameSpeed = levelData.speed;
-    document.getElementById('mainMenu').style.display = 'none';
-    document.getElementById('levelName').textContent = levelData.name;
-    resetGame();
-    gameState = 'playing';
-    gameRunning = true;
-    Game.audio.play('level' + level); // Play level-specific music (level1, level2, or level3)
-    gameLoop();
-}
-
-function startEndless() {
-    currentMode = 'endless';
-    gameSpeed = 5;
-    document.getElementById('mainMenu').style.display = 'none';
-    document.getElementById('levelName').textContent = 'Endless Mode';
-    document.getElementById('progress').textContent = '';
-    resetGame();
-    gameState = 'playing';
-    gameRunning = true;
-    Game.audio.play('endless'); // Start endless music
-    gameLoop();
-}
-
-function resetGame() {
-    score = 0;
-    frameCount = 0;
-    Game.obstacles.list = [];
-    Game.particles.list = [];
-    Game.player.y = ground.y - Game.player.height;
-    Game.player.velocityY = 0;
-    Game.player.isJumping = false;
-    Game.player.rotation = 0;
-    obstacleTimer = 0;
-    lastSpeedIncreaseScore = 0;
-    document.getElementById('score').textContent = score;
-    document.getElementById('ui').style.display = 'block';
-    document.getElementById('instructions').style.display = 'block';
-}
-
-function showMenu() {
-    document.getElementById('gameOver').style.display = 'none';
-    document.getElementById('levelComplete').style.display = 'none';
-    document.getElementById('ui').style.display = 'none';
-    document.getElementById('instructions').style.display = 'none';
-    document.getElementById('mainMenu').style.display = 'block';
-    gameState = 'menu';
-    gameRunning = false;
-    Game.audio.play('menu'); // Return to menu music
-}
 
 
 // ===================================
@@ -618,411 +986,20 @@ document.getElementById('musicToggle').addEventListener('click', () => Game.audi
 document.getElementById('restartBtn').addEventListener('click', () => {
     document.getElementById('gameOver').style.display = 'none';
     if (currentMode === 'level') {
-        startLevel(currentLevel);
+        Game.startLevel(currentLevel);
     } else {
-        startEndless();
+        Game.startEndless();
     }
 });
 
-document.getElementById('menuBtn').addEventListener('click', showMenu);
-document.getElementById('menuBtn2').addEventListener('click', showMenu);
+document.getElementById('menuBtn').addEventListener('click', () => Game.showMenu());
+document.getElementById('menuBtn2').addEventListener('click', () => Game.showMenu());
 
 document.getElementById('nextLevelBtn').addEventListener('click', () => {
     document.getElementById('levelComplete').style.display = 'none';
     if (currentLevel < 3) {
-        startLevel(currentLevel + 1);
+        Game.startLevel(currentLevel + 1);
     } else {
-        showMenu();
+        Game.showMenu();
     }
 });
-
-
-// ===================================
-// COLLISION DETECTION
-// ===================================
-
-function checkCollision(rect1, rect2) {
-    return rect1.x < rect2.x + rect2.width &&
-           rect1.x + rect1.width > rect2.x &&
-           rect1.y < rect2.y + rect2.height &&
-           rect1.y + rect1.height > rect2.y;
-}
-
-// Check if a point is inside a triangle using barycentric coordinates
-function pointInTriangle(px, py, x1, y1, x2, y2, x3, y3) {
-    const denominator = ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-    const a = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denominator;
-    const b = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denominator;
-    const c = 1 - a - b;
-
-    return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
-}
-
-// Check if a rectangle collides with a triangle (spike)
-function checkTriangleCollision(rect, triangle) {
-    // Triangle points for spike: bottom-left, top-center, bottom-right
-    const x1 = triangle.x;
-    const y1 = triangle.y + triangle.height;
-    const x2 = triangle.x + triangle.width / 2;
-    const y2 = triangle.y;
-    const x3 = triangle.x + triangle.width;
-    const y3 = triangle.y + triangle.height;
-
-    // Check if any corner of the rectangle is inside the triangle
-    const corners = [
-        { x: rect.x, y: rect.y },
-        { x: rect.x + rect.width, y: rect.y },
-        { x: rect.x, y: rect.y + rect.height },
-        { x: rect.x + rect.width, y: rect.y + rect.height }
-    ];
-
-    for (let corner of corners) {
-        if (pointInTriangle(corner.x, corner.y, x1, y1, x2, y2, x3, y3)) {
-            return true;
-        }
-    }
-
-    // Check if triangle peak is inside rectangle (for when player lands on top of spike)
-    if (x2 >= rect.x && x2 <= rect.x + rect.width &&
-        y2 >= rect.y && y2 <= rect.y + rect.height) {
-        return true;
-    }
-
-    return false;
-}
-
-function isLandingOnTop(playerRect, obstacleRect) {
-    const bottomY = playerRect.y + playerRect.height;
-    const tolerance = 15;
-
-    return bottomY >= obstacleRect.y &&
-           bottomY <= obstacleRect.y + tolerance &&
-           playerRect.velocityY >= 0;
-}
-
-
-// ===================================
-// GAME UPDATE LOGIC
-// ===================================
-
-function update() {
-    if (!gameRunning) return;
-
-    frameCount++;
-
-    // ===== Level Mode Logic =====
-    if (currentMode === 'level') {
-        const levelData = levels[currentLevel];
-        const progress = Math.min(100, Math.floor((frameCount / levelData.duration) * 100));
-        document.getElementById('progress').textContent = `Progress: ${progress}%`;
-
-        // Check level completion
-        if (frameCount >= levelData.duration && Game.obstacles.list.length === 0) {
-            levelComplete();
-            return;
-        }
-
-        // Spawn level obstacles
-        const obstaclesAtFrame = levelData.obstacles.filter(obs => obs.frame === frameCount);
-        obstaclesAtFrame.forEach(obstacleData => {
-            Game.obstacles.create(obstacleData.type, obstacleData.x);
-        });
-    } 
-    // ===== Endless Mode Logic =====
-    else {
-        obstacleTimer++;
-        if (obstacleTimer > obstacleSpawnRate) {
-            Game.obstacles.createRandom();
-            obstacleTimer = 0;
-        }
-
-        // Increase difficulty every 10 obstacles
-        if (score > 0 && score >= lastSpeedIncreaseScore + 10) {
-            gameSpeed += 0.5;
-            obstacleSpawnRate = Math.max(50, obstacleSpawnRate - 5);
-            lastSpeedIncreaseScore = score;
-        }
-    }
-
-    // ===== Player Physics =====
-    Game.player.velocityY += Game.player.gravity;
-    Game.player.y += Game.player.velocityY;
-
-    // Ground collision
-    if (Game.player.y + Game.player.height >= ground.y) {
-        Game.player.y = ground.y - Game.player.height;
-        Game.player.velocityY = 0;
-        Game.player.isJumping = false;
-        Game.player.rotation = Math.round(Game.player.rotation / 90) * 90;
-    }
-
-    // Hold-to-jump on ground
-    if (isHoldingJump && !Game.player.isJumping && Game.player.y + Game.player.height >= ground.y - 1) {
-        Game.player.jump();
-    }
-
-    // Rotate cube while jumping
-    if (Game.player.isJumping) {
-        Game.player.rotation += 8;
-    }
-
-    // ===== Update Obstacles =====
-    for (let i = Game.obstacles.list.length - 1; i >= 0; i--) {
-        Game.obstacles.list[i].x -= gameSpeed;
-
-        // Collision detection
-        let collision = false;
-
-        // Use triangular collision for spikes
-        if (Game.obstacles.list[i].type === 'spike') {
-            collision = checkTriangleCollision(Game.player, Game.obstacles.list[i]);
-        } else {
-            collision = checkCollision(Game.player, Game.obstacles.list[i]);
-        }
-
-        if (collision) {
-            // Orbs are not deadly
-            if (Game.obstacles.list[i].type === 'orb') {
-                continue;
-            }
-            // Platform safe landing
-            else if (Game.obstacles.list[i].type === 'platform' && isLandingOnTop(Game.player, Game.obstacles.list[i])) {
-                Game.player.y = Game.obstacles.list[i].y - Game.player.height;
-                Game.player.velocityY = 0;
-                Game.player.isJumping = false;
-                Game.player.rotation = Math.round(Game.player.rotation / 90) * 90;
-
-                if (isHoldingJump) {
-                    Game.player.jump();
-                }
-            }
-            // Deadly collision
-            else {
-                gameOver();
-                return;
-            }
-        }
-
-        // Update orb animation
-        if (Game.obstacles.list[i].type === 'orb') {
-            Game.obstacles.list[i].pulsePhase += 0.1;
-        }
-
-        // Remove off-screen obstacles
-        if (Game.obstacles.list[i].x + Game.obstacles.list[i].width < 0) {
-            Game.obstacles.list.splice(i, 1);
-            score++;
-            document.getElementById('score').textContent = score;
-        }
-    }
-
-    // ===== Update Particles =====
-    Game.particles.update();
-}
-
-
-// ===================================
-// RENDERING (DRAW)
-// ===================================
-
-function draw() {
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (gameState === 'menu') return;
-
-    // ===== Background Grid =====
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < canvas.width; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(i - (frameCount * gameSpeed % 40), 0);
-        ctx.lineTo(i - (frameCount * gameSpeed % 40), canvas.height);
-        ctx.stroke();
-    }
-
-    // ===== Ground =====
-    ctx.fillStyle = ground.color;
-    ctx.fillRect(0, ground.y, canvas.width, canvas.height - ground.y);
-
-    ctx.strokeStyle = '#00d4ff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, ground.y);
-    ctx.lineTo(canvas.width, ground.y);
-    ctx.stroke();
-
-    // ===== Obstacles =====
-    Game.obstacles.list.forEach(obstacle => {
-        if (obstacle.type === 'spike') {
-            drawSpike(obstacle);
-        } 
-        else if (obstacle.type === 'platform') {
-            drawPlatform(obstacle);
-        } 
-        else if (obstacle.type === 'orb') {
-            drawOrb(obstacle);
-        } 
-        else {
-            drawBlock(obstacle);
-        }
-    });
-
-    // ===== Particles =====
-    Game.particles.draw(ctx);
-
-    // ===== Player =====
-    drawPlayer();
-}
-
-function drawSpike(obstacle) {
-    ctx.fillStyle = obstacle.color;
-    ctx.beginPath();
-    ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
-    ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y);
-    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
-    ctx.closePath();
-    ctx.fill();
-    
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-}
-
-function drawBlock(obstacle) {
-    ctx.fillStyle = obstacle.color;
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-}
-
-function drawPlatform(obstacle) {
-    ctx.fillStyle = obstacle.color;
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-    
-    // Safe top indicator
-    ctx.strokeStyle = '#6fffb0';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(obstacle.x, obstacle.y);
-    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
-    ctx.stroke();
-}
-
-function drawOrb(obstacle) {
-    const centerX = obstacle.x + obstacle.width / 2;
-    const centerY = obstacle.y + obstacle.height / 2;
-    const pulseSize = obstacle.activated ? 0.5 : 1 + Math.sin(obstacle.pulsePhase) * 0.15;
-    const radius = (obstacle.width / 2) * pulseSize;
-    
-    // Outer glow
-    if (!obstacle.activated) {
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = obstacle.color;
-    }
-    
-    // Orb circle
-    ctx.fillStyle = obstacle.activated ? 'rgba(255, 217, 61, 0.3)' : obstacle.color;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Outline
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // Inner shine
-    if (!obstacle.activated) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.beginPath();
-        ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    
-    ctx.shadowBlur = 0;
-}
-
-function drawPlayer() {
-    ctx.save();
-    ctx.translate(Game.player.x + Game.player.width / 2, Game.player.y + Game.player.height / 2);
-    ctx.rotate(Game.player.rotation * Math.PI / 180);
-
-    // Glow effect
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = Game.player.color;
-    ctx.strokeStyle = Game.player.color;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
-    ctx.shadowBlur = 0;
-
-    // Cube body
-    ctx.fillStyle = Game.player.color;
-    ctx.fillRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
-
-    // Cube outline
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(-Game.player.width / 2, -Game.player.height / 2, Game.player.width, Game.player.height);
-
-    // Inner detail
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-Game.player.width / 2 + 5, -Game.player.height / 2 + 5, Game.player.width - 10, Game.player.height - 10);
-
-    ctx.restore();
-}
-
-
-// ===================================
-// GAME STATE FUNCTIONS
-// ===================================
-
-function gameOver() {
-    gameRunning = false;
-    gameState = 'gameOver';
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('gameOver').style.display = 'block';
-    document.getElementById('instructions').style.display = 'none';
-}
-
-function levelComplete() {
-    gameRunning = false;
-    gameState = 'levelComplete';
-    document.getElementById('levelScore').textContent = score;
-    document.getElementById('levelComplete').style.display = 'block';
-    document.getElementById('instructions').style.display = 'none';
-
-    // Update next level button
-    if (currentLevel >= 3) {
-        document.getElementById('nextLevelBtn').textContent = 'Back to Menu';
-    } else {
-        document.getElementById('nextLevelBtn').textContent = 'Next Level';
-    }
-}
-
-
-// ===================================
-// GAME LOOP
-// ===================================
-
-function gameLoop() {
-    update();
-    draw();
-    
-    if (gameRunning) {
-        requestAnimationFrame(gameLoop);
-    } else if (Game.particles.list.length > 0) {
-        // Continue drawing particles after game ends
-        let particleLoop = setInterval(() => {
-            draw();
-            if (Game.particles.list.length === 0) {
-                clearInterval(particleLoop);
-            }
-        }, 1000 / 60);
-    }
-}
