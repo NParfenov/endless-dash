@@ -205,8 +205,11 @@ const Game = {
             }
         },
 
+        // random obstacle creation for endless mode
+        // todo: generation based on speed
+
         createRandom() {
-            const types = ['spike', 'block', 'platform', 'double', 'triple', 'platformHop', 'orb', 'longSpikes'];
+            const types = ['spike', 'block', 'doubleBlock', 'platform', 'double', 'triple', 'spikesX4', 'spikesX5', 'platformHop', 'orb', 'longSpikes'];
             const type = types[Math.floor(Math.random() * types.length)];
 
             if (type === 'spike') {
@@ -214,6 +217,10 @@ const Game = {
             }
             else if (type === 'block') {
                 this.create('block');
+            }
+            else if (type === 'doubleBlock') {
+                this.create('block', 0);
+                this.create('block', STEP);
             }
             else if (type === 'platform') {
                 this.create('platform');
@@ -225,22 +232,36 @@ const Game = {
             else if (type === 'triple') {
                 this.create('spike', 0);
                 this.create('spike', STEP);
+                this.create('spike', STEP*2);
+            }
+            else if (Game.player.speed >= 7 && type === 'spikesX4') {
+                this.create('spike', 0);
                 this.create('spike', STEP);
+                this.create('spike', STEP*2);
+                this.create('spike', STEP*3);
             }
-            else if (type === 'platformHop') {
-                this.create('platform', 0);
-                this.create('platform', STEP*3);
-            }
-            else if (type === 'orb') {
-                this.create('orb', 0);
-            }
-            else if (type === 'longSpikes') {
-                // 5 spikes with orb above
+            else if (Game.player.speed >= 8 && type === 'spikesX5') {
                 this.create('spike', 0);
                 this.create('spike', STEP);
                 this.create('spike', STEP*2);
                 this.create('spike', STEP*3);
                 this.create('spike', STEP*4);
+            }
+            else if (type === 'platformHop') {
+                this.create('platform', 0);
+                this.create('platform', STEP*4);
+            }
+            else if (type === 'orb') {
+                this.create('orb', 0);
+            }
+            else if (type === 'longSpikes') {
+                // 6 spikes with orb above
+                this.create('spike', 0);
+                this.create('spike', STEP);
+                this.create('spike', STEP*2);
+                this.create('spike', STEP*3);
+                this.create('spike', STEP*4);
+                this.create('spike', STEP*5);
                 this.create('orb', STEP*2);
             }
         }
@@ -661,8 +682,8 @@ const Game = {
                 obstacleTimer = 0;
             }
 
-            // Increase difficulty every 10 obstacles
-            if (score > 0 && score >= lastSpeedIncreaseScore + 10) {
+            // Increase difficulty every 15 obstacles
+            if (score > 0 && score >= lastSpeedIncreaseScore + 15) {
                 gameSpeed += 0.5;
                 obstacleSpawnRate = Math.max(50, obstacleSpawnRate - 5);
                 lastSpeedIncreaseScore = score;
