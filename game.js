@@ -200,127 +200,124 @@ const Game = {
                 this.create('orb', 80);
             }
         }
-    }
-};
+    },
 
+    // Audio system
+    audio: {
+        tracks: {
+            menu: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3',
+            level1: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3',
+            level2: 'https://cdn.pixabay.com/audio/2025/05/21/audio_fa20813ea6.mp3',
+            level3: 'https://cdn.pixabay.com/audio/2025/08/30/audio_00ae00f400.mp3',
+            endless: 'https://audio.ngfiles.com/952000/952542_naither.mp3?f1595965602'
+        },
+        menuMusic: null,
+        level1Music: null,
+        level2Music: null,
+        level3Music: null,
+        endlessMusic: null,
+        currentMusic: null,
+        enabled: true,
 
-// ===================================
-// MUSIC SYSTEM
-// ===================================
+        init() {
+            try {
+                this.menuMusic = new Audio(this.tracks.menu);
+                this.level1Music = new Audio(this.tracks.level1);
+                this.level2Music = new Audio(this.tracks.level2);
+                this.level3Music = new Audio(this.tracks.level3);
+                this.endlessMusic = new Audio(this.tracks.endless);
 
-// Music tracks - Using free energetic electronic music from pixabay.com (royalty-free)
-const musicTracks = {
-    menu: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3', // Upbeat electronic menu
-    level1: 'https://cdn.pixabay.com/audio/2023/07/14/audio_85276704c6.mp3', // Energetic techno - Level 1
-    level2: 'https://cdn.pixabay.com/audio/2025/05/21/audio_fa20813ea6.mp3', // Fast electronic - Level 2
-    level3: 'https://cdn.pixabay.com/audio/2025/08/30/audio_00ae00f400.mp3', // Intense electronic - Level 3
-    endless: 'https://audio.ngfiles.com/952000/952542_naither.mp3?f1595965602' // High energy endless loop
-};
+                // Set all music to loop
+                this.menuMusic.loop = true;
+                this.level1Music.loop = false;
+                this.level2Music.loop = false;
+                this.level3Music.loop = false;
+                this.endlessMusic.loop = true;
 
-// Audio objects
-let menuMusic = null;
-let level1Music = null;
-let level2Music = null;
-let level3Music = null;
-let endlessMusic = null;
-let currentMusic = null;
-let musicEnabled = true;
+                // Set volume
+                this.menuMusic.volume = 0.3;
+                this.level1Music.volume = 0.3;
+                this.level2Music.volume = 0.3;
+                this.level3Music.volume = 0.3;
+                this.endlessMusic.volume = 0.3;
+            } catch (error) {
+                console.log('Music initialization failed:', error);
+                this.enabled = false;
+            }
+        },
 
-// Initialize music
-function initMusic() {
-    try {
-        menuMusic = new Audio(musicTracks.menu);
-        level1Music = new Audio(musicTracks.level1);
-        level2Music = new Audio(musicTracks.level2);
-        level3Music = new Audio(musicTracks.level3);
-        endlessMusic = new Audio(musicTracks.endless);
-        
-        // Set all music to loop
-        menuMusic.loop = true;
-        level1Music.loop = false;
-        level2Music.loop = false;
-        level3Music.loop = false;
-        endlessMusic.loop = true;
-        
-        // Set volume
-        menuMusic.volume = 0.3;
-        level1Music.volume = 0.3;
-        level2Music.volume = 0.3;
-        level3Music.volume = 0.3;
-        endlessMusic.volume = 0.3;
-    } catch (error) {
-        console.log('Music initialization failed:', error);
-        musicEnabled = false;
-    }
-}
+        play(track) {
+            if (!this.enabled) return;
 
-// Play specific music track
-function playMusic(track) {
-    if (!musicEnabled) return;
-    
-    // Stop current music
-    stopMusic();
-    
-    // Play new track
-    if (track === 'menu' && menuMusic) {
-        currentMusic = menuMusic;
-    } else if (track === 'level1' && level1Music) {
-        currentMusic = level1Music;
-    } else if (track === 'level2' && level2Music) {
-        currentMusic = level2Music;
-    } else if (track === 'level3' && level3Music) {
-        currentMusic = level3Music;
-    } else if (track === 'endless' && endlessMusic) {
-        currentMusic = endlessMusic;
-    }
-    
-    if (currentMusic) {
-        currentMusic.currentTime = 0;
-        currentMusic.play().catch(error => {
-            console.log('Music playback failed:', error);
-        });
-    }
-}
+            // Stop current music
+            this.stop();
 
-// Stop music
-function stopMusic() {
-    if (currentMusic) {
-        currentMusic.pause();
-        currentMusic.currentTime = 0;
-    }
-}
+            // Play new track
+            if (track === 'menu' && this.menuMusic) {
+                this.currentMusic = this.menuMusic;
+            } else if (track === 'level1' && this.level1Music) {
+                this.currentMusic = this.level1Music;
+            } else if (track === 'level2' && this.level2Music) {
+                this.currentMusic = this.level2Music;
+            } else if (track === 'level3' && this.level3Music) {
+                this.currentMusic = this.level3Music;
+            } else if (track === 'endless' && this.endlessMusic) {
+                this.currentMusic = this.endlessMusic;
+            }
 
-// Toggle music on/off
-function toggleMusic() {
-    musicEnabled = !musicEnabled;
-    const musicBtn = document.getElementById('musicToggle');
-    
-    if (musicEnabled) {
-        musicBtn.textContent = '🔊 Music';
-        musicBtn.classList.remove('muted');
-        // Resume music based on current game state
-        if (gameState === 'menu') {
-            playMusic('menu');
-        } else if (gameRunning && currentMode === 'level') {
-            playMusic('level' + currentLevel);
-        } else if (gameRunning && currentMode === 'endless') {
-            playMusic('endless');
+            if (this.currentMusic) {
+                this.currentMusic.currentTime = 0;
+                this.currentMusic.play().catch(error => {
+                    console.log('Music playback failed:', error);
+                });
+            }
+        },
+
+        stop() {
+            if (this.currentMusic) {
+                this.currentMusic.pause();
+                this.currentMusic.currentTime = 0;
+            }
+        },
+
+        toggle() {
+            this.enabled = !this.enabled;
+            const musicBtn = document.getElementById('musicToggle');
+
+            if (this.enabled) {
+                musicBtn.textContent = '🔊 Music';
+                musicBtn.classList.remove('muted');
+                // Resume music based on current game state
+                if (gameState === 'menu') {
+                    this.play('menu');
+                } else if (gameRunning && currentMode === 'level') {
+                    this.play('level' + currentLevel);
+                } else if (gameRunning && currentMode === 'endless') {
+                    this.play('endless');
+                }
+            } else {
+                musicBtn.textContent = '🔇 Muted';
+                musicBtn.classList.add('muted');
+                this.stop();
+            }
         }
-    } else {
-        musicBtn.textContent = '🔇 Muted';
-        musicBtn.classList.add('muted');
-        stopMusic();
     }
-}
+};
+
+
+// ===================================
+// MUSIC SYSTEM (now in Game.audio)
+// ===================================
 
 // Initialize music on page load
-initMusic();
+Game.audio.init();
 // Start menu music after user interaction (required by browsers)
+let menuMusicStarted = false;
 document.addEventListener('click', function initMenuMusic() {
-    if (gameState === 'menu' && musicEnabled) {
-        playMusic('menu');
+    if (!menuMusicStarted && Game.audio.enabled) {
+        Game.audio.play('menu');
+        menuMusicStarted = true;
     }
-    document.removeEventListener('click', initMenuMusic);
 }, { once: true });
 
 
@@ -505,7 +502,7 @@ function startLevel(level) {
     resetGame();
     gameState = 'playing';
     gameRunning = true;
-    playMusic('level' + level); // Play level-specific music (level1, level2, or level3)
+    Game.audio.play('level' + level); // Play level-specific music (level1, level2, or level3)
     gameLoop();
 }
 
@@ -518,7 +515,7 @@ function startEndless() {
     resetGame();
     gameState = 'playing';
     gameRunning = true;
-    playMusic('endless'); // Start endless music
+    Game.audio.play('endless'); // Start endless music
     gameLoop();
 }
 
@@ -546,7 +543,7 @@ function showMenu() {
     document.getElementById('mainMenu').style.display = 'block';
     gameState = 'menu';
     gameRunning = false;
-    playMusic('menu'); // Return to menu music
+    Game.audio.play('menu'); // Return to menu music
 }
 
 
@@ -615,7 +612,7 @@ document.addEventListener('keyup', (e) => {
 // ===================================
 
 // Music toggle button
-document.getElementById('musicToggle').addEventListener('click', toggleMusic);
+document.getElementById('musicToggle').addEventListener('click', () => Game.audio.toggle());
 
 // Restart button
 document.getElementById('restartBtn').addEventListener('click', () => {
@@ -813,7 +810,7 @@ function update() {
 
         // Remove off-screen obstacles
         if (Game.obstacles.list[i].x + Game.obstacles.list[i].width < 0) {
-            obstacles.splice(i, 1);
+            Game.obstacles.list.splice(i, 1);
             score++;
             document.getElementById('score').textContent = score;
         }
