@@ -8,7 +8,8 @@
     box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -53,19 +54,107 @@ body {
     min-width: 400px;
 }
 
+/* old h1 style
+
 #mainMenu h1 {
     font-size: 64px;
     margin-bottom: 40px;
     color: #00d4ff;
     text-shadow: 0 0 20px #00d4ff;
     letter-spacing: 8px;
-}
+} 
+*/
 
 #levelInfo {
     margin-top: 30px;
     font-size: 14px;
     color: rgba(255, 255, 255, 0.6);
     line-height: 1.8;
+}
+
+/* main menu effects */
+
+.main-title {
+    margin-bottom: 40px;
+    font-size: 4rem;
+    font-weight: 1000;
+    color:#00d4ff;
+}
+
+
+/* --- Floating Effect Keyframes --- */
+@keyframes float-subtle {
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        /* Moves the text 3 pixels up */
+        transform: translateY(-3px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+/* --- Floating Class Application --- */
+.float-subtle {
+    /* Name, duration, timing function, iteration count */
+    animation: float-subtle 3s ease-in-out infinite;
+}
+
+/* --- 2. Glitter Effect Class Definition --- */
+
+/* Keyframes for moving the gradient/sparkle pattern */
+@keyframes sparkle-move {
+    0% {
+        background-position: 200% center;
+    }
+
+    100% {
+        background-position: -200% center;
+    }
+}
+
+.glitter-text {
+    /* * Crucial: Allows us to position the ::before pseudo-element 
+             * relative to this text element.
+             */
+    position: relative;
+    z-index: 1;
+    /* Ensure text is above background elements */
+    display: inline-block;
+    /* Essential for proper sizing of the ::before */
+}
+
+.glitter-text::before {
+    content: attr(data-text);
+    /* Duplicate the text content */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* The Sparkle/Glitter Gradient Setup */
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.9) 60%,
+            transparent 100%);
+    background-size: 200% 100%;
+    /* Make the gradient wider than the text */
+
+    /* Clip the gradient background to the text shape */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* Makes the text itself transparent, showing the gradient */
+
+    /* Layering and Animation */
+    opacity: 0.5;
+    /* Reduce opacity so the base color is still visible underneath */
+    animation: sparkle-move 2s linear infinite;
 }
 
 /* ===================================
@@ -333,7 +422,8 @@ body {
    GAME OVER & LEVEL COMPLETE SCREENS
    =================================== */
 
-#gameOver, #levelComplete {
+#gameOver,
+#levelComplete {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -349,7 +439,8 @@ body {
     min-width: 400px;
 }
 
-#gameOver h2, #levelComplete h2 {
+#gameOver h2,
+#levelComplete h2 {
     font-size: 48px;
     margin-bottom: 20px;
 }
@@ -362,7 +453,8 @@ body {
     color: #4ecca3;
 }
 
-#gameOver p, #levelComplete p {
+#gameOver p,
+#levelComplete p {
     font-size: 24px;
     margin-bottom: 30px;
 }
