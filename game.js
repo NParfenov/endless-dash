@@ -33,6 +33,51 @@ window.addEventListener('resize', resizeCanvas);
 
 
 // ===================================
+// GAME NAMESPACE
+// ===================================
+
+const Game = {
+    // Particle system
+    particles: {
+        list: [],
+
+        create(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                this.list.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 30,
+                    color: color
+                });
+            }
+        },
+
+        update() {
+            for (let i = this.list.length - 1; i >= 0; i--) {
+                this.list[i].x += this.list[i].vx;
+                this.list[i].y += this.list[i].vy;
+                this.list[i].life--;
+                if (this.list[i].life <= 0) {
+                    this.list.splice(i, 1);
+                }
+            }
+        },
+
+        draw(ctx) {
+            this.list.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.life / 30;
+                ctx.fillRect(particle.x, particle.y, 4, 4);
+                ctx.globalAlpha = 1;
+            });
+        }
+    }
+};
+
+
+// ===================================
 // MUSIC SYSTEM
 // ===================================
 
@@ -171,8 +216,7 @@ let obstacles = [];
 let obstacleTimer = 0;
 let obstacleSpawnRate = 90; // frames between obstacles in endless mode
 
-// Particle effects
-let particles = [];
+// Particle effects (now in Game.particles)
 
 
 // ===================================
@@ -369,7 +413,7 @@ function resetGame() {
     score = 0;
     frameCount = 0;
     obstacles = [];
-    particles = [];
+    Game.particles.list = [];
     player.y = ground.y - player.height;
     player.velocityY = 0;
     player.isJumping = false;
@@ -484,21 +528,8 @@ function createRandomObstacle() {
 
 
 // ===================================
-// PARTICLE EFFECTS
+// PARTICLE EFFECTS (now in Game.particles)
 // ===================================
-
-function createParticles(x, y, color) {
-    for (let i = 0; i < 8; i++) {
-        particles.push({
-            x: x,
-            y: y,
-            vx: (Math.random() - 0.5) * 8,
-            vy: (Math.random() - 0.5) * 8,
-            life: 30,
-            color: color
-        });
-    }
-}
 
 
 // ===================================
@@ -513,8 +544,8 @@ function jump() {
         if (obstacle.type === 'orb' && !obstacle.activated && checkCollision(player, obstacle)) {
             player.velocityY = player.jumpPower;
             obstacle.activated = true;
-            createParticles(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.color);
-            createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color);
+            Game.particles.create(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.color);
+            Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, player.color);
             player.isJumping = true;
             return;
         }
@@ -524,7 +555,7 @@ function jump() {
     if (!player.isJumping && gameRunning) {
         player.velocityY = player.jumpPower;
         player.isJumping = true;
-        createParticles(player.x + player.width / 2, player.y + player.height, player.color);
+        Game.particles.create(player.x + player.width / 2, player.y + player.height, player.color);
     }
 }
 
@@ -732,14 +763,7 @@ function update() {
     }
 
     // ===== Update Particles =====
-    for (let i = particles.length - 1; i >= 0; i--) {
-        particles[i].x += particles[i].vx;
-        particles[i].y += particles[i].vy;
-        particles[i].life--;
-        if (particles[i].life <= 0) {
-            particles.splice(i, 1);
-        }
-    }
+    Game.particles.update();
 }
 
 
@@ -791,12 +815,7 @@ function draw() {
     });
 
     // ===== Particles =====
-    particles.forEach(particle => {
-        ctx.fillStyle = particle.color;
-        ctx.globalAlpha = particle.life / 30;
-        ctx.fillRect(particle.x, particle.y, 4, 4);
-        ctx.globalAlpha = 1;
-    });
+    Game.particles.draw(ctx);
 
     // ===== Player =====
     drawPlayer();
@@ -917,9 +936,9 @@ function gameOver() {
     document.getElementById('instructions').style.display = 'none';
     
     // Explosion particles
-    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#ff6b6b');
-    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#ffd93d');
-    createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color);
+    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, '#ff6b6b');
+    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, '#ffd93d');
+    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, player.color);
 }
 
 function levelComplete() {
@@ -937,8 +956,8 @@ function levelComplete() {
     }
 
     // Success particles
-    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#4ecca3');
-    createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color);
+    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, '#4ecca3');
+    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, player.color);
 }
 
 
@@ -952,11 +971,11 @@ function gameLoop() {
     
     if (gameRunning) {
         requestAnimationFrame(gameLoop);
-    } else if (particles.length > 0) {
+    } else if (Game.particles.list.length > 0) {
         // Continue drawing particles after game ends
         let particleLoop = setInterval(() => {
             draw();
-            if (particles.length === 0) {
+            if (Game.particles.list.length === 0) {
                 clearInterval(particleLoop);
             }
         }, 1000 / 60);
