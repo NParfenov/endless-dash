@@ -174,9 +174,9 @@ const Game = {
             else if (type === 'block') {
                 this.list.push({
                     x: canvas.width + xOffset,
-                    y: ground.y - 60,
-                    width: 60,
-                    height: 60,
+                    y: ground.y - 40,
+                    width: 40,
+                    height: 40,
                     type: 'block',
                     color: '#ff4444'
                 });
@@ -184,9 +184,9 @@ const Game = {
             else if (type === 'platform') {
                 this.list.push({
                     x: canvas.width + xOffset,
-                    y: ground.y - 60,
-                    width: 60,
-                    height: 60,
+                    y: ground.y - 40,
+                    width: 40,
+                    height: 40,
                     type: 'platform',
                     color: '#4ecca3'
                 });
@@ -912,8 +912,10 @@ const levels = {
         speed: 5,
         duration: 25, // seconds
         obstacles: [
+            { time: 0.80, type: 'spike', x: 0 },
             { time: 1.67, type: 'spike', x: 0 },
             { time: 3.33, type: 'spike', x: 0 },
+            { time: 3.33, type: 'spike', x: 40 },
             { time: 5.00, type: 'block', x: 0 },
             { time: 6.67, type: 'spike', x: 0 },
             { time: 7.50, type: 'spike', x: 40 },
@@ -970,6 +972,7 @@ const levels = {
             { time: 22.50, type: 'platform', x: 0 },
             { time: 23.67, type: 'platform', x: 0 },
             { time: 24.83, type: 'platform', x: 0 },
+            { time: 24.83, type: 'spike', x: 60 },
 
             { time: 26.67, type: 'spike', x: 0 }
         ]
