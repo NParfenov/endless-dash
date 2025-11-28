@@ -1,5 +1,5 @@
 /* ===================================
-   CUBE DASH - GAME LOGIC
+   ENDLESS DASH - GAME LOGIC
    A Geometry Dash-style platformer game
    =================================== */
 
@@ -16,6 +16,112 @@ function resizeCanvas() {
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+
+
+// ===================================
+// MUSIC SYSTEM
+// ===================================
+
+// Music tracks - Using free music from pixabay.com (royalty-free)
+const musicTracks = {
+    menu: 'https://cdn.pixabay.com/audio/2022/03/10/audio_4a5e255db9.mp3', // Upbeat electronic
+    level: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3', // Energetic gaming music
+    endless: 'https://cdn.pixabay.com/audio/2022/08/02/audio_74e8d3a5e0.mp3' // Intense electronic
+};
+
+// Audio objects
+let menuMusic = null;
+let levelMusic = null;
+let endlessMusic = null;
+let currentMusic = null;
+let musicEnabled = true;
+
+// Initialize music
+function initMusic() {
+    try {
+        menuMusic = new Audio(musicTracks.menu);
+        levelMusic = new Audio(musicTracks.level);
+        endlessMusic = new Audio(musicTracks.endless);
+        
+        // Set all music to loop
+        menuMusic.loop = true;
+        levelMusic.loop = true;
+        endlessMusic.loop = true;
+        
+        // Set volume
+        menuMusic.volume = 0.3;
+        levelMusic.volume = 0.3;
+        endlessMusic.volume = 0.3;
+    } catch (error) {
+        console.log('Music initialization failed:', error);
+        musicEnabled = false;
+    }
+}
+
+// Play specific music track
+function playMusic(track) {
+    if (!musicEnabled) return;
+    
+    // Stop current music
+    stopMusic();
+    
+    // Play new track
+    if (track === 'menu' && menuMusic) {
+        currentMusic = menuMusic;
+    } else if (track === 'level' && levelMusic) {
+        currentMusic = levelMusic;
+    } else if (track === 'endless' && endlessMusic) {
+        currentMusic = endlessMusic;
+    }
+    
+    if (currentMusic) {
+        currentMusic.currentTime = 0;
+        currentMusic.play().catch(error => {
+            console.log('Music playback failed:', error);
+        });
+    }
+}
+
+// Stop music
+function stopMusic() {
+    if (currentMusic) {
+        currentMusic.pause();
+        currentMusic.currentTime = 0;
+    }
+}
+
+// Toggle music on/off
+function toggleMusic() {
+    musicEnabled = !musicEnabled;
+    const musicBtn = document.getElementById('musicToggle');
+    
+    if (musicEnabled) {
+        musicBtn.textContent = '🔊 Music';
+        musicBtn.classList.remove('muted');
+        // Resume music based on current game state
+        if (gameState === 'menu') {
+            playMusic('menu');
+        } else if (gameRunning && currentMode === 'level') {
+            playMusic('level');
+        } else if (gameRunning && currentMode === 'endless') {
+            playMusic('endless');
+        }
+    } else {
+        musicBtn.textContent = '🔇 Muted';
+        musicBtn.classList.add('muted');
+        stopMusic();
+    }
+}
+
+// Initialize music on page load
+initMusic();
+// Start menu music after user interaction (required by browsers)
+document.addEventListener('click', function initMenuMusic() {
+    if (gameState === 'menu' && musicEnabled) {
+        playMusic('menu');
+    }
+    document.removeEventListener('click', initMenuMusic);
+}, { once: true });
 
 
 // ===================================
@@ -214,6 +320,7 @@ function startLevel(level) {
     resetGame();
     gameState = 'playing';
     gameRunning = true;
+    playMusic('level'); // Start level music
     gameLoop();
 }
 
@@ -226,6 +333,7 @@ function startEndless() {
     resetGame();
     gameState = 'playing';
     gameRunning = true;
+    playMusic('endless'); // Start endless music
     gameLoop();
 }
 
@@ -253,6 +361,7 @@ function showMenu() {
     document.getElementById('mainMenu').style.display = 'block';
     gameState = 'menu';
     gameRunning = false;
+    playMusic('menu'); // Return to menu music
 }
 
 
@@ -441,6 +550,10 @@ document.addEventListener('keyup', (e) => {
 // BUTTON HANDLERS
 // ===================================
 
+// Music toggle button
+document.getElementById('musicToggle').addEventListener('click', toggleMusic);
+
+// Restart button
 document.getElementById('restartBtn').addEventListener('click', () => {
     document.getElementById('gameOver').style.display = 'none';
     if (currentMode === 'level') {
