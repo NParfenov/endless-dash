@@ -262,6 +262,7 @@ const Game = {
         endlessMusic: null,
         currentMusic: null,
         enabled: true,
+        volume: 0.3, // Default volume (0.0 to 1.0)
 
         init() {
             try {
@@ -279,11 +280,11 @@ const Game = {
                 this.endlessMusic.loop = true;
 
                 // Set volume
-                this.menuMusic.volume = 0.3;
-                this.level1Music.volume = 0.3;
-                this.level2Music.volume = 0.3;
-                this.level3Music.volume = 0.3;
-                this.endlessMusic.volume = 0.3;
+                this.menuMusic.volume = this.volume;
+                this.level1Music.volume = this.volume;
+                this.level2Music.volume = this.volume;
+                this.level3Music.volume = this.volume;
+                this.endlessMusic.volume = this.volume;
             } catch (error) {
                 console.log('Music initialization failed:', error);
                 this.enabled = false;
@@ -326,11 +327,8 @@ const Game = {
 
         toggle() {
             this.enabled = !this.enabled;
-            const musicBtn = document.getElementById('musicToggle');
 
             if (this.enabled) {
-                musicBtn.textContent = '🔊 Music';
-                musicBtn.classList.remove('muted');
                 // Resume music based on current game state
                 if (gameState === 'menu') {
                     this.play('menu');
@@ -340,10 +338,23 @@ const Game = {
                     this.play('endless');
                 }
             } else {
-                musicBtn.textContent = '🔇 Muted';
-                musicBtn.classList.add('muted');
                 this.stop();
             }
+        },
+
+        setVolume(value) {
+            // value should be 0-100, convert to 0.0-1.0
+            this.volume = value / 100;
+
+            // Update all tracks
+            if (this.menuMusic) this.menuMusic.volume = this.volume;
+            if (this.level1Music) this.level1Music.volume = this.volume;
+            if (this.level2Music) this.level2Music.volume = this.volume;
+            if (this.level3Music) this.level3Music.volume = this.volume;
+            if (this.endlessMusic) this.endlessMusic.volume = this.volume;
+
+            // Save to localStorage
+            localStorage.setItem('endlessDashVolume', value);
         }
     },
 
@@ -811,6 +822,16 @@ const Game = {
 
 // Initialize music on page load
 Game.audio.init();
+
+// Load saved volume from localStorage
+const savedVolume = localStorage.getItem('endlessDashVolume');
+if (savedVolume !== null) {
+    const volumeValue = parseInt(savedVolume);
+    document.getElementById('volumeSlider').value = volumeValue;
+    document.getElementById('volumeValue').textContent = volumeValue;
+    Game.audio.setVolume(volumeValue);
+}
+
 // Start menu music after user interaction (required by browsers)
 let menuMusicStarted = false;
 document.addEventListener('click', function initMenuMusic() {
@@ -1054,8 +1075,36 @@ document.addEventListener('keyup', (e) => {
 // BUTTON HANDLERS
 // ===================================
 
-// Music toggle button
-document.getElementById('musicToggle').addEventListener('click', () => Game.audio.toggle());
+// Music toggle button - opens popup
+document.getElementById('musicToggle').addEventListener('click', () => {
+    const popup = document.getElementById('musicControlPopup');
+    popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+});
+
+// Close popup button
+document.getElementById('closeMusicPopup').addEventListener('click', () => {
+    document.getElementById('musicControlPopup').style.display = 'none';
+});
+
+// Toggle music mute button inside popup
+document.getElementById('toggleMusicBtn').addEventListener('click', () => {
+    Game.audio.toggle();
+    const btn = document.getElementById('toggleMusicBtn');
+    if (Game.audio.enabled) {
+        btn.textContent = '🔊 Mute';
+        btn.classList.remove('muted');
+    } else {
+        btn.textContent = '🔇 Unmute';
+        btn.classList.add('muted');
+    }
+});
+
+// Volume slider
+document.getElementById('volumeSlider').addEventListener('input', (e) => {
+    const value = e.target.value;
+    document.getElementById('volumeValue').textContent = value;
+    Game.audio.setVolume(value);
+});
 
 // Restart button
 document.getElementById('restartBtn').addEventListener('click', () => {

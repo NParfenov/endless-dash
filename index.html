@@ -34,6 +34,21 @@
     <!-- Music Control -->
     <button id="musicToggle" class="music-btn">🔊 Music</button>
 
+    <!-- Music Control Popup -->
+    <div id="musicControlPopup" class="music-popup">
+        <button id="closeMusicPopup" class="close-popup-btn">✕</button>
+        <div class="music-popup-content">
+            <h3>Music Controls</h3>
+            <div class="music-popup-controls">
+                <button id="toggleMusicBtn" class="control-btn">🔊 Mute</button>
+                <div id="volumeControl">
+                    <label for="volumeSlider">Volume: <span id="volumeValue">30</span>%</label>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="30">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Instructions -->
     <div id="instructions">
         Click or Tap to Jump!
