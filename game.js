@@ -529,6 +529,10 @@ const Game = {
         currentMode = 'level';
         const levelData = levels[level];
         gameSpeed = levelData.speed;
+
+        // Reset spawned flags for all obstacles
+        levelData.obstacles.forEach(obs => obs.spawned = false);
+
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('levelName').textContent = levelData.name;
         this.reset();
@@ -554,6 +558,8 @@ const Game = {
     reset() {
         score = 0;
         frameCount = 0;
+        currentLevelTime = 0;
+        lastFrameTime = performance.now();
         this.obstacles.list = [];
         this.particles.list = [];
         this.player.y = ground.y - this.player.height;
@@ -605,24 +611,35 @@ const Game = {
     update() {
         if (!gameRunning) return;
 
+        // Calculate delta time for frame-rate independence
+        const currentTime = performance.now();
+        const deltaTime = (currentTime - lastFrameTime) / 1000; // Convert to seconds
+        lastFrameTime = currentTime;
+
         frameCount++;
 
         // ===== Level Mode Logic =====
         if (currentMode === 'level') {
+            // Update level time
+            currentLevelTime += deltaTime;
+
             const levelData = levels[currentLevel];
-            const progress = Math.min(100, Math.floor((frameCount / levelData.duration) * 100));
+            const progress = Math.min(100, Math.floor((currentLevelTime / levelData.duration) * 100));
             document.getElementById('progress').textContent = `Progress: ${progress}%`;
 
             // Check level completion
-            if (frameCount >= levelData.duration && this.obstacles.list.length === 0) {
+            if (currentLevelTime >= levelData.duration && this.obstacles.list.length === 0) {
                 this.levelComplete();
                 return;
             }
 
-            // Spawn level obstacles
-            const obstaclesAtFrame = levelData.obstacles.filter(obs => obs.frame === frameCount);
-            obstaclesAtFrame.forEach(obstacleData => {
+            // Spawn level obstacles based on time
+            const obstaclesAtTime = levelData.obstacles.filter(obs =>
+                obs.time <= currentLevelTime && !obs.spawned
+            );
+            obstaclesAtTime.forEach(obstacleData => {
                 this.obstacles.create(obstacleData.type, obstacleData.x);
+                obstacleData.spawned = true; // Mark as spawned
             });
         }
         // ===== Endless Mode Logic =====
@@ -856,6 +873,10 @@ let frameCount = 0;
 let isHoldingJump = false;
 let lastSpeedIncreaseScore = 0;
 
+// Time tracking for frame-rate independent gameplay
+let lastFrameTime = 0;
+let currentLevelTime = 0; // Time elapsed in current level (seconds)
+
 // Obstacle spawning variables (obstacles.list now in Game.obstacles)
 let obstacleTimer = 0;
 let obstacleSpawnRate = 90; // frames between obstacles in endless mode
@@ -889,121 +910,121 @@ const levels = {
     1: {
         name: "Level 1: The Beginning",
         speed: 5,
-        duration: 1500, // frames (25 seconds at 60fps)
+        duration: 25, // seconds
         obstacles: [
-            { frame: 100, type: 'spike', x: 0 },
-            { frame: 200, type: 'spike', x: 0 },
-            { frame: 300, type: 'block', x: 0 },
-            { frame: 400, type: 'spike', x: 0 },
-            { frame: 450, type: 'spike', x: 40 },
-            
+            { time: 1.67, type: 'spike', x: 0 },
+            { time: 3.33, type: 'spike', x: 0 },
+            { time: 5.00, type: 'block', x: 0 },
+            { time: 6.67, type: 'spike', x: 0 },
+            { time: 7.50, type: 'spike', x: 40 },
+
             // 4 spikes with orb - teaching mechanic
-            { frame: 600, type: 'spike', x: 0 },
-            { frame: 600, type: 'spike', x: 40 },
-            { frame: 600, type: 'spike', x: 80 },
-            { frame: 600, type: 'spike', x: 120 },
-            { frame: 600, type: 'orb', x: 60 },
-            
-            { frame: 800, type: 'platform', x: 0 },
-            { frame: 950, type: 'platform', x: 0 },
-            { frame: 1100, type: 'spike', x: 0 },
-            
+            { time: 10.00, type: 'spike', x: 0 },
+            { time: 10.00, type: 'spike', x: 40 },
+            { time: 10.00, type: 'spike', x: 80 },
+            { time: 10.00, type: 'spike', x: 120 },
+            { time: 10.00, type: 'orb', x: 60 },
+
+            { time: 13.33, type: 'platform', x: 0 },
+            { time: 15.83, type: 'platform', x: 0 },
+            { time: 18.33, type: 'spike', x: 0 },
+
             // Staircase
-            { frame: 1250, type: 'platform', x: 0 },
-            { frame: 1330, type: 'platform', x: 0 },
-            { frame: 1410, type: 'platform', x: 0 },
-            
-            { frame: 1500, type: 'spike', x: 0 }
+            { time: 20.83, type: 'platform', x: 0 },
+            { time: 22.17, type: 'platform', x: 0 },
+            { time: 23.50, type: 'platform', x: 0 },
+
+            { time: 25.00, type: 'spike', x: 0 }
         ]
     },
     2: {
         name: "Level 2: Platform Jumper",
         speed: 6,
-        duration: 1650,
+        duration: 27.5, // seconds
         obstacles: [
-            { frame: 80, type: 'spike', x: 0 },
-            { frame: 160, type: 'spike', x: 0 },
-            { frame: 240, type: 'block', x: 0 },
-            
+            { time: 1.33, type: 'spike', x: 0 },
+            { time: 2.67, type: 'spike', x: 0 },
+            { time: 4.00, type: 'block', x: 0 },
+
             // 5 spikes with orb
-            { frame: 380, type: 'spike', x: 0 },
-            { frame: 380, type: 'spike', x: 40 },
-            { frame: 380, type: 'spike', x: 80 },
-            { frame: 380, type: 'spike', x: 120 },
-            { frame: 380, type: 'spike', x: 160 },
-            { frame: 380, type: 'orb', x: 80 },
-            
+            { time: 6.33, type: 'spike', x: 0 },
+            { time: 6.33, type: 'spike', x: 40 },
+            { time: 6.33, type: 'spike', x: 80 },
+            { time: 6.33, type: 'spike', x: 120 },
+            { time: 6.33, type: 'spike', x: 160 },
+            { time: 6.33, type: 'orb', x: 80 },
+
             // Platform hop sequence
-            { frame: 550, type: 'platform', x: 0 },
-            { frame: 680, type: 'platform', x: 0 },
-            { frame: 810, type: 'platform', x: 0 },
-            
-            { frame: 950, type: 'spike', x: 0 },
-            { frame: 1030, type: 'block', x: 0 },
-            
+            { time: 9.17, type: 'platform', x: 0 },
+            { time: 11.33, type: 'platform', x: 0 },
+            { time: 13.50, type: 'platform', x: 0 },
+
+            { time: 15.83, type: 'spike', x: 0 },
+            { time: 17.17, type: 'block', x: 0 },
+
             // High platform with orb
-            { frame: 1150, type: 'orb', x: 0 },
-            { frame: 1220, type: 'platform', x: 0 },
-            
+            { time: 19.17, type: 'orb', x: 0 },
+            { time: 20.33, type: 'platform', x: 0 },
+
             // Staircase
-            { frame: 1350, type: 'platform', x: 0 },
-            { frame: 1420, type: 'platform', x: 0 },
-            { frame: 1490, type: 'platform', x: 0 },
-            
-            { frame: 1600, type: 'spike', x: 0 }
+            { time: 22.50, type: 'platform', x: 0 },
+            { time: 23.67, type: 'platform', x: 0 },
+            { time: 24.83, type: 'platform', x: 0 },
+
+            { time: 26.67, type: 'spike', x: 0 }
         ]
     },
     3: {
         name: "Level 3: Speed Trial",
         speed: 7,
-        duration: 1800,
+        duration: 30, // seconds
         obstacles: [
-            { frame: 80, type: 'spike', x: 0 },
-            { frame: 160, type: 'spike', x: 0 },
-            { frame: 240, type: 'block', x: 0 },
-            
+            { time: 1.33, type: 'spike', x: 0 },
+            { time: 2.67, type: 'spike', x: 0 },
+            { time: 4.00, type: 'block', x: 0 },
+
             // 6 spikes with orb
-            { frame: 350, type: 'spike', x: 0 },
-            { frame: 350, type: 'spike', x: 40 },
-            { frame: 350, type: 'spike', x: 80 },
-            { frame: 350, type: 'spike', x: 120 },
-            { frame: 350, type: 'spike', x: 160 },
-            { frame: 350, type: 'spike', x: 200 },
-            { frame: 350, type: 'orb', x: 100 },
-            
+            { time: 5.83, type: 'spike', x: 0 },
+            { time: 5.83, type: 'spike', x: 40 },
+            { time: 5.83, type: 'spike', x: 80 },
+            { time: 5.83, type: 'spike', x: 120 },
+            { time: 5.83, type: 'spike', x: 160 },
+            { time: 5.83, type: 'spike', x: 200 },
+            { time: 5.83, type: 'orb', x: 100 },
+
             // Platform hops
-            { frame: 550, type: 'platform', x: 0 },
-            { frame: 650, type: 'platform', x: 0 },
-            
+            { time: 9.17, type: 'platform', x: 0 },
+            { time: 10.83, type: 'platform', x: 0 },
+
             // High platform with orb
-            { frame: 780, type: 'orb', x: 0 },
-            { frame: 850, type: 'platform', x: 0 },
-            
-            { frame: 980, type: 'spike', x: 0 },
-            
+            { time: 13.00, type: 'orb', x: 0 },
+            { time: 14.17, type: 'platform', x: 0 },
+
+            { time: 16.33, type: 'spike', x: 0 },
+
             // Staircase
-            { frame: 1080, type: 'platform', x: 0 },
-            { frame: 1140, type: 'platform', x: 0 },
-            { frame: 1200, type: 'platform', x: 0 },
-            { frame: 1260, type: 'platform', x: 0 },
-            
-            { frame: 1380, type: 'block', x: 0 },
-            
+            { time: 18.00, type: 'platform', x: 0 },
+            { time: 19.00, type: 'platform', x: 0 },
+            { time: 20.00, type: 'platform', x: 0 },
+            { time: 21.00, type: 'platform', x: 0 },
+
+            { time: 23.00, type: 'block', x: 0 },
+
             // 5 spikes with orb
-            { frame: 1500, type: 'spike', x: 0 },
-            { frame: 1500, type: 'spike', x: 40 },
-            { frame: 1500, type: 'spike', x: 80 },
-            { frame: 1500, type: 'spike', x: 120 },
-            { frame: 1500, type: 'spike', x: 160 },
-            { frame: 1500, type: 'orb', x: 80 },
-            
-            { frame: 1650, type: 'platform', x: 0 },
-            
+            { time: 25.00, type: 'spike', x: 0 },
+            { time: 25.00, type: 'spike', x: 40 },
+            { time: 25.00, type: 'spike', x: 80 },
+            { time: 25.00, type: 'spike', x: 120 },
+            { time: 25.00, type: 'spike', x: 160 },
+            { time: 25.00, type: 'orb', x: 80 },
+
+            { time: 27.50, type: 'platform', x: 0 },
+
             // Final challenge
-            { frame: 1750, type: 'spike', x: 0 },
-            { frame: 1750, type: 'spike', x: 40 },
-            { frame: 1750, type: 'spike', x: 80 },
-            { frame: 1750, type: 'spike', x: 120 }
+            { time: 29.17, type: 'spike', x: 0 },
+            { time: 29.17, type: 'spike', x: 40 },
+            { time: 29.17, type: 'spike', x: 80 },
+            { time: 29.17, type: 'spike', x: 120 }
         ]
     }
 };
