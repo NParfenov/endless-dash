@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cube Dash</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main Menu -->
+    <div id="mainMenu">
+        <h1>CUBE DASH</h1>
+        <div class="menu-buttons">
+            <button class="menu-btn" onclick="startLevel(1)">Level 1</button>
+            <button class="menu-btn" onclick="startLevel(2)">Level 2</button>
+            <button class="menu-btn" onclick="startLevel(3)">Level 3</button>
+            <button class="menu-btn" onclick="startEndless()">Endless Mode</button>
+        </div>
+        <div id="levelInfo">
+            <p>Level 1: The Beginning (Easy - Speed 5)</p>
+            <p>Level 2: Platform Jumper (Medium - Speed 6)</p>
+            <p>Level 3: Speed Trial (Hard - Speed 7)</p>
+            <p>Endless: Survive as long as you can!</p>
+        </div>
+    </div>
+
+    <!-- Game UI -->
+    <div id="ui">
+        <div>Score: <span id="score">0</span></div>
+        <div id="levelName"></div>
+        <div id="progress"></div>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions">
+        Click or Tap to Jump!
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Game Over Screen -->
+    <div id="gameOver">
+        <h2 id="gameOverTitle">Game Over!</h2>
+        <p id="gameOverMessage">Final Score: <span id="finalScore">0</span></p>
+        <div class="menu-buttons">
+            <button class="menu-btn" id="restartBtn">Restart</button>
+            <button class="menu-btn" id="menuBtn">Main Menu</button>
+        </div>
+    </div>
+
+    <!-- Level Complete Screen -->
+    <div id="levelComplete">
+        <h2>Level Complete!</h2>
+        <p>Score: <span id="levelScore">0</span></p>
+        <div class="menu-buttons">
+            <button class="menu-btn" id="nextLevelBtn">Next Level</button>
+            <button class="menu-btn" id="menuBtn2">Main Menu</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

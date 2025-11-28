@@ -1,0 +1,177 @@
+/* ===================================
+   GLOBAL STYLES
+   =================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: linear-gradient(to bottom, #1a1a2e, #0f0f1e);
+    font-family: 'Arial', sans-serif;
+    touch-action: none;
+}
+
+/* ===================================
+   CANVAS
+   =================================== */
+
+#gameCanvas {
+    display: block;
+    margin: 0 auto;
+    background: linear-gradient(to bottom, #16213e, #0f3460);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ===================================
+   MAIN MENU
+   =================================== */
+
+#mainMenu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 50px;
+    border-radius: 20px;
+    color: white;
+    text-align: center;
+    z-index: 30;
+    border: 3px solid #00d4ff;
+    min-width: 400px;
+}
+
+#mainMenu h1 {
+    font-size: 64px;
+    margin-bottom: 40px;
+    color: #00d4ff;
+    text-shadow: 0 0 20px #00d4ff;
+    letter-spacing: 8px;
+}
+
+#levelInfo {
+    margin-top: 30px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.8;
+}
+
+/* ===================================
+   BUTTONS
+   =================================== */
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.menu-btn {
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    border: none;
+    padding: 15px 40px;
+    font-size: 24px;
+    color: white;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+}
+
+.menu-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+}
+
+.menu-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===================================
+   GAME UI
+   =================================== */
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 10;
+}
+
+#levelName {
+    font-size: 18px;
+    margin-top: 10px;
+    color: #00d4ff;
+}
+
+#progress {
+    font-size: 16px;
+    margin-top: 5px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ===================================
+   INSTRUCTIONS
+   =================================== */
+
+#instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 18px;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* ===================================
+   GAME OVER & LEVEL COMPLETE SCREENS
+   =================================== */
+
+#gameOver, #levelComplete {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.95);
+    padding: 40px;
+    border-radius: 20px;
+    color: white;
+    text-align: center;
+    display: none;
+    z-index: 20;
+    border: 3px solid #00d4ff;
+    min-width: 400px;
+}
+
+#gameOver h2, #levelComplete h2 {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+#gameOver h2 {
+    color: #ff6b6b;
+}
+
+#levelComplete h2 {
+    color: #4ecca3;
+}
+
+#gameOver p, #levelComplete p {
+    font-size: 24px;
+    margin-bottom: 30px;
+}

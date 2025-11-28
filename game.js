@@ -1,0 +1,823 @@
+/* ===================================
+   CUBE DASH - GAME LOGIC
+   A Geometry Dash-style platformer game
+   =================================== */
+
+// ===================================
+// CANVAS SETUP
+// ===================================
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = Math.min(window.innerWidth, 800);
+    canvas.height = Math.min(window.innerHeight, 600);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+
+// ===================================
+// GAME STATE VARIABLES
+// ===================================
+
+let gameState = 'menu'; // 'menu', 'playing', 'gameOver', 'levelComplete'
+let currentMode = 'endless'; // 'endless' or 'level'
+let currentLevel = 1;
+let gameRunning = false;
+let score = 0;
+let gameSpeed = 5;
+let frameCount = 0;
+let isHoldingJump = false;
+let lastSpeedIncreaseScore = 0;
+
+// Obstacle spawning variables
+let obstacles = [];
+let obstacleTimer = 0;
+let obstacleSpawnRate = 90; // frames between obstacles in endless mode
+
+// Particle effects
+let particles = [];
+
+
+// ===================================
+// PLAYER OBJECT
+// ===================================
+
+const player = {
+    x: 100,
+    y: 0,
+    width: 40,
+    height: 40,
+    velocityY: 0,
+    gravity: 0.8,
+    jumpPower: -15,
+    isJumping: false,
+    rotation: 0,
+    color: '#00d4ff'
+};
+
+
+// ===================================
+// GROUND OBJECT
+// ===================================
+
+const ground = {
+    y: canvas.height - 80,
+    height: 80,
+    color: '#1a1a2e'
+};
+
+player.y = ground.y - player.height;
+
+
+// ===================================
+// LEVEL DEFINITIONS
+// ===================================
+
+const levels = {
+    1: {
+        name: "Level 1: The Beginning",
+        speed: 5,
+        duration: 1500, // frames (25 seconds at 60fps)
+        obstacles: [
+            { frame: 100, type: 'spike', x: 0 },
+            { frame: 200, type: 'spike', x: 0 },
+            { frame: 300, type: 'block', x: 0 },
+            { frame: 400, type: 'spike', x: 0 },
+            { frame: 450, type: 'spike', x: 40 },
+            
+            // 4 spikes with orb - teaching mechanic
+            { frame: 600, type: 'spike', x: 0 },
+            { frame: 600, type: 'spike', x: 40 },
+            { frame: 600, type: 'spike', x: 80 },
+            { frame: 600, type: 'spike', x: 120 },
+            { frame: 600, type: 'orb', x: 60 },
+            
+            { frame: 800, type: 'platform', x: 0 },
+            { frame: 950, type: 'platform', x: 0 },
+            { frame: 1100, type: 'spike', x: 0 },
+            
+            // Staircase
+            { frame: 1250, type: 'platform', x: 0 },
+            { frame: 1330, type: 'platform', x: 0 },
+            { frame: 1410, type: 'platform', x: 0 },
+            
+            { frame: 1500, type: 'spike', x: 0 }
+        ]
+    },
+    2: {
+        name: "Level 2: Platform Jumper",
+        speed: 6,
+        duration: 1650,
+        obstacles: [
+            { frame: 80, type: 'spike', x: 0 },
+            { frame: 160, type: 'spike', x: 0 },
+            { frame: 240, type: 'block', x: 0 },
+            
+            // 5 spikes with orb
+            { frame: 380, type: 'spike', x: 0 },
+            { frame: 380, type: 'spike', x: 40 },
+            { frame: 380, type: 'spike', x: 80 },
+            { frame: 380, type: 'spike', x: 120 },
+            { frame: 380, type: 'spike', x: 160 },
+            { frame: 380, type: 'orb', x: 80 },
+            
+            // Platform hop sequence
+            { frame: 550, type: 'platform', x: 0 },
+            { frame: 680, type: 'platform', x: 0 },
+            { frame: 810, type: 'platform', x: 0 },
+            
+            { frame: 950, type: 'spike', x: 0 },
+            { frame: 1030, type: 'block', x: 0 },
+            
+            // High platform with orb
+            { frame: 1150, type: 'orb', x: 0 },
+            { frame: 1220, type: 'platform', x: 0 },
+            
+            // Staircase
+            { frame: 1350, type: 'platform', x: 0 },
+            { frame: 1420, type: 'platform', x: 0 },
+            { frame: 1490, type: 'platform', x: 0 },
+            
+            { frame: 1600, type: 'spike', x: 0 }
+        ]
+    },
+    3: {
+        name: "Level 3: Speed Trial",
+        speed: 7,
+        duration: 1800,
+        obstacles: [
+            { frame: 80, type: 'spike', x: 0 },
+            { frame: 160, type: 'spike', x: 0 },
+            { frame: 240, type: 'block', x: 0 },
+            
+            // 6 spikes with orb
+            { frame: 350, type: 'spike', x: 0 },
+            { frame: 350, type: 'spike', x: 40 },
+            { frame: 350, type: 'spike', x: 80 },
+            { frame: 350, type: 'spike', x: 120 },
+            { frame: 350, type: 'spike', x: 160 },
+            { frame: 350, type: 'spike', x: 200 },
+            { frame: 350, type: 'orb', x: 100 },
+            
+            // Platform hops
+            { frame: 550, type: 'platform', x: 0 },
+            { frame: 650, type: 'platform', x: 0 },
+            
+            // High platform with orb
+            { frame: 780, type: 'orb', x: 0 },
+            { frame: 850, type: 'platform', x: 0 },
+            
+            { frame: 980, type: 'spike', x: 0 },
+            
+            // Staircase
+            { frame: 1080, type: 'platform', x: 0 },
+            { frame: 1140, type: 'platform', x: 0 },
+            { frame: 1200, type: 'platform', x: 0 },
+            { frame: 1260, type: 'platform', x: 0 },
+            
+            { frame: 1380, type: 'block', x: 0 },
+            
+            // 5 spikes with orb
+            { frame: 1500, type: 'spike', x: 0 },
+            { frame: 1500, type: 'spike', x: 40 },
+            { frame: 1500, type: 'spike', x: 80 },
+            { frame: 1500, type: 'spike', x: 120 },
+            { frame: 1500, type: 'spike', x: 160 },
+            { frame: 1500, type: 'orb', x: 80 },
+            
+            { frame: 1650, type: 'platform', x: 0 },
+            
+            // Final challenge
+            { frame: 1750, type: 'spike', x: 0 },
+            { frame: 1750, type: 'spike', x: 40 },
+            { frame: 1750, type: 'spike', x: 80 },
+            { frame: 1750, type: 'spike', x: 120 }
+        ]
+    }
+};
+
+
+// ===================================
+// GAME MODE FUNCTIONS
+// ===================================
+
+function startLevel(level) {
+    currentLevel = level;
+    currentMode = 'level';
+    const levelData = levels[level];
+    gameSpeed = levelData.speed;
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('levelName').textContent = levelData.name;
+    resetGame();
+    gameState = 'playing';
+    gameRunning = true;
+    gameLoop();
+}
+
+function startEndless() {
+    currentMode = 'endless';
+    gameSpeed = 5;
+    document.getElementById('mainMenu').style.display = 'none';
+    document.getElementById('levelName').textContent = 'Endless Mode';
+    document.getElementById('progress').textContent = '';
+    resetGame();
+    gameState = 'playing';
+    gameRunning = true;
+    gameLoop();
+}
+
+function resetGame() {
+    score = 0;
+    frameCount = 0;
+    obstacles = [];
+    particles = [];
+    player.y = ground.y - player.height;
+    player.velocityY = 0;
+    player.isJumping = false;
+    player.rotation = 0;
+    obstacleTimer = 0;
+    lastSpeedIncreaseScore = 0;
+    document.getElementById('score').textContent = score;
+    document.getElementById('ui').style.display = 'block';
+    document.getElementById('instructions').style.display = 'block';
+}
+
+function showMenu() {
+    document.getElementById('gameOver').style.display = 'none';
+    document.getElementById('levelComplete').style.display = 'none';
+    document.getElementById('ui').style.display = 'none';
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('mainMenu').style.display = 'block';
+    gameState = 'menu';
+    gameRunning = false;
+}
+
+
+// ===================================
+// OBSTACLE CREATION
+// ===================================
+
+function createObstacle(type, xOffset = 0) {
+    if (type === 'spike') {
+        obstacles.push({
+            x: canvas.width + xOffset,
+            y: ground.y - 40,
+            width: 40,
+            height: 40,
+            type: 'spike',
+            color: '#ff6b6b'
+        });
+    } 
+    else if (type === 'block') {
+        obstacles.push({
+            x: canvas.width + xOffset,
+            y: ground.y - 60,
+            width: 60,
+            height: 60,
+            type: 'block',
+            color: '#ff4444'
+        });
+    } 
+    else if (type === 'platform') {
+        obstacles.push({
+            x: canvas.width + xOffset,
+            y: ground.y - 60,
+            width: 60,
+            height: 60,
+            type: 'platform',
+            color: '#4ecca3'
+        });
+    } 
+    else if (type === 'orb') {
+        obstacles.push({
+            x: canvas.width + xOffset,
+            y: ground.y - 150,
+            width: 30,
+            height: 30,
+            type: 'orb',
+            color: '#ffd93d',
+            activated: false,
+            pulsePhase: 0
+        });
+    }
+}
+
+function createRandomObstacle() {
+    const types = ['spike', 'block', 'platform', 'double', 'triple', 'platformHop', 'orb', 'longSpikes'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    if (type === 'spike') {
+        createObstacle('spike');
+    } 
+    else if (type === 'block') {
+        createObstacle('block');
+    } 
+    else if (type === 'platform') {
+        createObstacle('platform');
+    } 
+    else if (type === 'double') {
+        createObstacle('spike', 0);
+        createObstacle('spike', 40);
+    } 
+    else if (type === 'triple') {
+        createObstacle('spike', 0);
+        createObstacle('spike', 40);
+        createObstacle('spike', 80);
+    } 
+    else if (type === 'platformHop') {
+        createObstacle('platform', 0);
+        createObstacle('platform', 150);
+    } 
+    else if (type === 'orb') {
+        createObstacle('orb', 0);
+    } 
+    else if (type === 'longSpikes') {
+        // 5 spikes with orb above
+        createObstacle('spike', 0);
+        createObstacle('spike', 40);
+        createObstacle('spike', 80);
+        createObstacle('spike', 120);
+        createObstacle('spike', 160);
+        createObstacle('orb', 80);
+    }
+}
+
+
+// ===================================
+// PARTICLE EFFECTS
+// ===================================
+
+function createParticles(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            life: 30,
+            color: color
+        });
+    }
+}
+
+
+// ===================================
+// PLAYER ACTIONS
+// ===================================
+
+function jump() {
+    if (!gameRunning) return;
+    
+    // Check for orb activation (double jump)
+    for (let obstacle of obstacles) {
+        if (obstacle.type === 'orb' && !obstacle.activated && checkCollision(player, obstacle)) {
+            player.velocityY = player.jumpPower;
+            obstacle.activated = true;
+            createParticles(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, obstacle.color);
+            createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color);
+            player.isJumping = true;
+            return;
+        }
+    }
+    
+    // Normal jump (only when on ground)
+    if (!player.isJumping && gameRunning) {
+        player.velocityY = player.jumpPower;
+        player.isJumping = true;
+        createParticles(player.x + player.width / 2, player.y + player.height, player.color);
+    }
+}
+
+
+// ===================================
+// INPUT HANDLING
+// ===================================
+
+// Mouse input
+canvas.addEventListener('mousedown', () => {
+    isHoldingJump = true;
+    if (gameRunning) jump();
+});
+
+canvas.addEventListener('mouseup', () => {
+    isHoldingJump = false;
+});
+
+// Touch input
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    isHoldingJump = true;
+    if (gameRunning) jump();
+});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    isHoldingJump = false;
+});
+
+// Keyboard input
+document.addEventListener('keydown', (e) => {
+    if ((e.code === 'Space' || e.code === 'ArrowUp') && gameRunning) {
+        e.preventDefault();
+        if (!isHoldingJump) {
+            isHoldingJump = true;
+            jump();
+        }
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        isHoldingJump = false;
+    }
+});
+
+
+// ===================================
+// BUTTON HANDLERS
+// ===================================
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+    document.getElementById('gameOver').style.display = 'none';
+    if (currentMode === 'level') {
+        startLevel(currentLevel);
+    } else {
+        startEndless();
+    }
+});
+
+document.getElementById('menuBtn').addEventListener('click', showMenu);
+document.getElementById('menuBtn2').addEventListener('click', showMenu);
+
+document.getElementById('nextLevelBtn').addEventListener('click', () => {
+    document.getElementById('levelComplete').style.display = 'none';
+    if (currentLevel < 3) {
+        startLevel(currentLevel + 1);
+    } else {
+        showMenu();
+    }
+});
+
+
+// ===================================
+// COLLISION DETECTION
+// ===================================
+
+function checkCollision(rect1, rect2) {
+    return rect1.x < rect2.x + rect2.width &&
+           rect1.x + rect1.width > rect2.x &&
+           rect1.y < rect2.y + rect2.height &&
+           rect1.y + rect1.height > rect2.y;
+}
+
+function isLandingOnTop(playerRect, obstacleRect) {
+    const bottomY = playerRect.y + playerRect.height;
+    const tolerance = 15;
+    
+    return bottomY >= obstacleRect.y && 
+           bottomY <= obstacleRect.y + tolerance &&
+           playerRect.velocityY >= 0;
+}
+
+
+// ===================================
+// GAME UPDATE LOGIC
+// ===================================
+
+function update() {
+    if (!gameRunning) return;
+
+    frameCount++;
+
+    // ===== Level Mode Logic =====
+    if (currentMode === 'level') {
+        const levelData = levels[currentLevel];
+        const progress = Math.min(100, Math.floor((frameCount / levelData.duration) * 100));
+        document.getElementById('progress').textContent = `Progress: ${progress}%`;
+
+        // Check level completion
+        if (frameCount >= levelData.duration && obstacles.length === 0) {
+            levelComplete();
+            return;
+        }
+
+        // Spawn level obstacles
+        const obstaclesAtFrame = levelData.obstacles.filter(obs => obs.frame === frameCount);
+        obstaclesAtFrame.forEach(obstacleData => {
+            createObstacle(obstacleData.type, obstacleData.x);
+        });
+    } 
+    // ===== Endless Mode Logic =====
+    else {
+        obstacleTimer++;
+        if (obstacleTimer > obstacleSpawnRate) {
+            createRandomObstacle();
+            obstacleTimer = 0;
+        }
+
+        // Increase difficulty every 10 obstacles
+        if (score > 0 && score >= lastSpeedIncreaseScore + 10) {
+            gameSpeed += 0.5;
+            obstacleSpawnRate = Math.max(50, obstacleSpawnRate - 5);
+            lastSpeedIncreaseScore = score;
+        }
+    }
+
+    // ===== Player Physics =====
+    player.velocityY += player.gravity;
+    player.y += player.velocityY;
+
+    // Ground collision
+    if (player.y + player.height >= ground.y) {
+        player.y = ground.y - player.height;
+        player.velocityY = 0;
+        player.isJumping = false;
+        player.rotation = Math.round(player.rotation / 90) * 90;
+    }
+
+    // Hold-to-jump on ground
+    if (isHoldingJump && !player.isJumping && player.y + player.height >= ground.y - 1) {
+        jump();
+    }
+
+    // Rotate cube while jumping
+    if (player.isJumping) {
+        player.rotation += 8;
+    }
+
+    // ===== Update Obstacles =====
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+
+        // Collision detection
+        if (checkCollision(player, obstacles[i])) {
+            // Orbs are not deadly
+            if (obstacles[i].type === 'orb') {
+                continue;
+            }
+            // Platform safe landing
+            else if (obstacles[i].type === 'platform' && isLandingOnTop(player, obstacles[i])) {
+                player.y = obstacles[i].y - player.height;
+                player.velocityY = 0;
+                player.isJumping = false;
+                player.rotation = Math.round(player.rotation / 90) * 90;
+                
+                if (isHoldingJump) {
+                    jump();
+                }
+            } 
+            // Deadly collision
+            else {
+                gameOver();
+                return;
+            }
+        }
+
+        // Update orb animation
+        if (obstacles[i].type === 'orb') {
+            obstacles[i].pulsePhase += 0.1;
+        }
+
+        // Remove off-screen obstacles
+        if (obstacles[i].x + obstacles[i].width < 0) {
+            obstacles.splice(i, 1);
+            score++;
+            document.getElementById('score').textContent = score;
+        }
+    }
+
+    // ===== Update Particles =====
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].x += particles[i].vx;
+        particles[i].y += particles[i].vy;
+        particles[i].life--;
+        if (particles[i].life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+
+// ===================================
+// RENDERING (DRAW)
+// ===================================
+
+function draw() {
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (gameState === 'menu') return;
+
+    // ===== Background Grid =====
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i - (frameCount * gameSpeed % 40), 0);
+        ctx.lineTo(i - (frameCount * gameSpeed % 40), canvas.height);
+        ctx.stroke();
+    }
+
+    // ===== Ground =====
+    ctx.fillStyle = ground.color;
+    ctx.fillRect(0, ground.y, canvas.width, ground.height);
+    
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, ground.y);
+    ctx.lineTo(canvas.width, ground.y);
+    ctx.stroke();
+
+    // ===== Obstacles =====
+    obstacles.forEach(obstacle => {
+        if (obstacle.type === 'spike') {
+            drawSpike(obstacle);
+        } 
+        else if (obstacle.type === 'platform') {
+            drawPlatform(obstacle);
+        } 
+        else if (obstacle.type === 'orb') {
+            drawOrb(obstacle);
+        } 
+        else {
+            drawBlock(obstacle);
+        }
+    });
+
+    // ===== Particles =====
+    particles.forEach(particle => {
+        ctx.fillStyle = particle.color;
+        ctx.globalAlpha = particle.life / 30;
+        ctx.fillRect(particle.x, particle.y, 4, 4);
+        ctx.globalAlpha = 1;
+    });
+
+    // ===== Player =====
+    drawPlayer();
+}
+
+function drawSpike(obstacle) {
+    ctx.fillStyle = obstacle.color;
+    ctx.beginPath();
+    ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
+    ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y);
+    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+    ctx.closePath();
+    ctx.fill();
+    
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function drawBlock(obstacle) {
+    ctx.fillStyle = obstacle.color;
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+}
+
+function drawPlatform(obstacle) {
+    ctx.fillStyle = obstacle.color;
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    
+    // Safe top indicator
+    ctx.strokeStyle = '#6fffb0';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(obstacle.x, obstacle.y);
+    ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
+    ctx.stroke();
+}
+
+function drawOrb(obstacle) {
+    const centerX = obstacle.x + obstacle.width / 2;
+    const centerY = obstacle.y + obstacle.height / 2;
+    const pulseSize = obstacle.activated ? 0.5 : 1 + Math.sin(obstacle.pulsePhase) * 0.15;
+    const radius = (obstacle.width / 2) * pulseSize;
+    
+    // Outer glow
+    if (!obstacle.activated) {
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = obstacle.color;
+    }
+    
+    // Orb circle
+    ctx.fillStyle = obstacle.activated ? 'rgba(255, 217, 61, 0.3)' : obstacle.color;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Outline
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Inner shine
+    if (!obstacle.activated) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    ctx.shadowBlur = 0;
+}
+
+function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+    ctx.rotate(player.rotation * Math.PI / 180);
+    
+    // Cube body
+    ctx.fillStyle = player.color;
+    ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    
+    // Cube outline
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    
+    // Inner detail
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-player.width / 2 + 5, -player.height / 2 + 5, player.width - 10, player.height - 10);
+    
+    ctx.restore();
+
+    // Glow effect
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = player.color;
+    ctx.strokeStyle = player.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(player.x, player.y, player.width, player.height);
+    ctx.shadowBlur = 0;
+}
+
+
+// ===================================
+// GAME STATE FUNCTIONS
+// ===================================
+
+function gameOver() {
+    gameRunning = false;
+    gameState = 'gameOver';
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('gameOver').style.display = 'block';
+    document.getElementById('instructions').style.display = 'none';
+    
+    // Explosion particles
+    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#ff6b6b');
+    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#ffd93d');
+    createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color);
+}
+
+function levelComplete() {
+    gameRunning = false;
+    gameState = 'levelComplete';
+    document.getElementById('levelScore').textContent = score;
+    document.getElementById('levelComplete').style.display = 'block';
+    document.getElementById('instructions').style.display = 'none';
+    
+    // Update next level button
+    if (currentLevel >= 3) {
+        document.getElementById('nextLevelBtn').textContent = 'Back to Menu';
+    } else {
+        document.getElementById('nextLevelBtn').textContent = 'Next Level';
+    }
+
+    // Success particles
+    createParticles(player.x + player.width / 2, player.y + player.height / 2, '#4ecca3');
+    createParticles(player.x + player.width / 2, player.y + player.height / 2, player.color);
+}
+
+
+// ===================================
+// GAME LOOP
+// ===================================
+
+function gameLoop() {
+    update();
+    draw();
+    
+    if (gameRunning) {
+        requestAnimationFrame(gameLoop);
+    } else if (particles.length > 0) {
+        // Continue drawing particles after game ends
+        let particleLoop = setInterval(() => {
+            draw();
+            if (particles.length === 0) {
+                clearInterval(particleLoop);
+            }
+        }, 1000 / 60);
+    }
+}
