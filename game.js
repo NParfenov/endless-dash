@@ -646,11 +646,54 @@ function checkCollision(rect1, rect2) {
            rect1.y + rect1.height > rect2.y;
 }
 
+// Check if a point is inside a triangle using barycentric coordinates
+function pointInTriangle(px, py, x1, y1, x2, y2, x3, y3) {
+    const denominator = ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+    const a = ((y2 - y3) * (px - x3) + (x3 - x2) * (py - y3)) / denominator;
+    const b = ((y3 - y1) * (px - x3) + (x1 - x3) * (py - y3)) / denominator;
+    const c = 1 - a - b;
+
+    return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
+}
+
+// Check if a rectangle collides with a triangle (spike)
+function checkTriangleCollision(rect, triangle) {
+    // Triangle points for spike: bottom-left, top-center, bottom-right
+    const x1 = triangle.x;
+    const y1 = triangle.y + triangle.height;
+    const x2 = triangle.x + triangle.width / 2;
+    const y2 = triangle.y;
+    const x3 = triangle.x + triangle.width;
+    const y3 = triangle.y + triangle.height;
+
+    // Check if any corner of the rectangle is inside the triangle
+    const corners = [
+        { x: rect.x, y: rect.y },
+        { x: rect.x + rect.width, y: rect.y },
+        { x: rect.x, y: rect.y + rect.height },
+        { x: rect.x + rect.width, y: rect.y + rect.height }
+    ];
+
+    for (let corner of corners) {
+        if (pointInTriangle(corner.x, corner.y, x1, y1, x2, y2, x3, y3)) {
+            return true;
+        }
+    }
+
+    // Check if triangle peak is inside rectangle (for when player lands on top of spike)
+    if (x2 >= rect.x && x2 <= rect.x + rect.width &&
+        y2 >= rect.y && y2 <= rect.y + rect.height) {
+        return true;
+    }
+
+    return false;
+}
+
 function isLandingOnTop(playerRect, obstacleRect) {
     const bottomY = playerRect.y + playerRect.height;
     const tolerance = 15;
-    
-    return bottomY >= obstacleRect.y && 
+
+    return bottomY >= obstacleRect.y &&
            bottomY <= obstacleRect.y + tolerance &&
            playerRect.velocityY >= 0;
 }
@@ -726,7 +769,16 @@ function update() {
         obstacles[i].x -= gameSpeed;
 
         // Collision detection
-        if (checkCollision(player, obstacles[i])) {
+        let collision = false;
+
+        // Use triangular collision for spikes
+        if (obstacles[i].type === 'spike') {
+            collision = checkTriangleCollision(player, obstacles[i]);
+        } else {
+            collision = checkCollision(player, obstacles[i]);
+        }
+
+        if (collision) {
             // Orbs are not deadly
             if (obstacles[i].type === 'orb') {
                 continue;
@@ -737,11 +789,11 @@ function update() {
                 player.velocityY = 0;
                 player.isJumping = false;
                 player.rotation = Math.round(player.rotation / 90) * 90;
-                
+
                 if (isHoldingJump) {
                     jump();
                 }
-            } 
+            }
             // Deadly collision
             else {
                 gameOver();
@@ -934,11 +986,6 @@ function gameOver() {
     document.getElementById('finalScore').textContent = score;
     document.getElementById('gameOver').style.display = 'block';
     document.getElementById('instructions').style.display = 'none';
-    
-    // Explosion particles
-    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, '#ff6b6b');
-    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, '#ffd93d');
-    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, player.color);
 }
 
 function levelComplete() {
@@ -947,17 +994,13 @@ function levelComplete() {
     document.getElementById('levelScore').textContent = score;
     document.getElementById('levelComplete').style.display = 'block';
     document.getElementById('instructions').style.display = 'none';
-    
+
     // Update next level button
     if (currentLevel >= 3) {
         document.getElementById('nextLevelBtn').textContent = 'Back to Menu';
     } else {
         document.getElementById('nextLevelBtn').textContent = 'Next Level';
     }
-
-    // Success particles
-    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, '#4ecca3');
-    Game.particles.create(player.x + player.width / 2, player.y + player.height / 2, player.color);
 }
 
 
